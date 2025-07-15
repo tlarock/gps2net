@@ -10,6 +10,7 @@ import fiona
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import pandas as pd
 from shapely.geometry import LineString, Point
 
 
@@ -26,7 +27,7 @@ def blockPrint():
 
 
 def enablePrint():
-    '''This method restores print() messages. 
+    '''This method restores print() messages.
     '''
     sys.stdout = sys.__stdout__
 
@@ -216,7 +217,9 @@ def createGraphFromSHPInput(filepath_shp):
             previous_segment = (0, 0)
             # get the attributes from the street
             id = street_segment['id']
-            oneway = street_segment['properties']['oneway']
+            # TODO FIXME Assume oneway is bidirectional for every edge
+            #oneway = street_segment['properties']['oneway']
+            oneway = 'B'
 
             # loop through all segments of a street
             for segment in street_segment['geometry']['coordinates']:
@@ -392,7 +395,7 @@ def getShortestPathAStar(source, target, source_line, target_line, source_line_o
         edge_target_end = new_line_target_after_cut[1][1]
 
         # get the edge (including the attributes)
-
+        # TODO: FIXME: All of these conditionals do the same thing???
         if(target_line_oneway == 'B'):
             graph_edge = DG.get_edge_data(
                 edge_target_start, edge_target_end)
@@ -887,7 +890,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
                 inter_dict_point['relative_position_normalized_closest_point_on_line'] = relative_position_normalized
                 inter_dict_point['input_line'] = newLS
 
-                inter_dict_point['oneway'] = input_line[1]['properties']['oneway']
+                #inter_dict_point['oneway'] = input_line[1]['properties']['oneway']
 
                 # distance needs to be float so that it can be sorted appropriately afterwards
                 inter_dict_point['distance'] = float(
@@ -913,7 +916,8 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
             relative_position_normalized = solution['relative_position_normalized_closest_point_on_line']
 
             intersected_line = solution['input_line']
-            intersected_line_oneway = solution['oneway']
+            # TODO FIXME Fixing to "B"
+            intersected_line_oneway = "B"
 
             # append x- and y-position of the mapped point, i.e. the closest point which lies on a street of the underlying network
             location_result['closest_intersection_x'] = closest_intersection_x
@@ -966,6 +970,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
                 # calculate the shortest path with A STAR algorithm
                 path, path_length, pathIDs = getShortestPathAStar((closest_intersection_x, closest_intersection_y), previous_point, list(
                     intersected_line.coords), list(previous_intersected_line.coords), intersected_line_oneway, previous_intersected_line_oneway, filepath_shp)
+
 
                 # calculate air line distance between source and target
                 air_line_length = distFrom(
@@ -1050,6 +1055,17 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
     statistics['checked_if_path_exists_for_second_best_solution_index'] = 0
     statistics['second_best_solution_yields_more_found_paths'] = 0
 
+    # TODO: FIXME: I added target/source and all of the current_*
+
+    #target = (0, 0)
+    #source = (0, 0)
+    #intersected_line = None
+    #target_intersected_line = None
+    #target_intersected_line_oneway = None
+    #timestamp = None
+    #intersected_line_oneway = None
+
+
     previous_target = (0, 0)
     previous_source = (0, 0)
     previous_intersected_line = None
@@ -1067,7 +1083,8 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
         current_txt_file, number_of_txt_files)
 
     previous_location_result = {}
-
+    # TODO FIXME
+    #current_location_result = {}
     with open(filepath, 'r') as f:
         mylist = f.read().splitlines()
 
@@ -1089,7 +1106,6 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
                 # get the result for the current location
                 current_location_result, source, target, intersected_line, target_intersected_line, timestamp, intersected_line_oneway, target_intersected_line_oneway = getLocationResult(
                     filepath_shp, x, y, passenger, timestamp, previous_source, previous_intersected_line, previous_timestamp, previous_intersected_line_oneway, minNumberOfLines)
-
             if (previous_location_result != {}):
 
                 # check if the result of the previous location can be improved
@@ -1159,7 +1175,9 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
 
                                 # calculate the solution for the data point whe currently look at with the new solution point.
                                 current_location_result_new, source_new, target_new, intersected_line_new, target_intersected_line_new, timestamp_new, intersected_line_oneway_new, target_intersected_line_oneway_new = getLocationResult(
-                                    filepath_shp, x, y, passenger, timestamp, (new_solution_point_x, new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], new_solution['oneway'], minNumberOfLines)
+                                    filepath_shp, x, y, passenger, timestamp,
+                                    (new_solution_point_x,
+                                     new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], 'B', minNumberOfLines)
 
                                 # calculate the solution for the data point whe previously looked at with the new solution point.
                                 previous_location_result_new, previous_source_new, previous_target_new, previous_intersected_line_new, previous_target_intersected_line_new, previous_timestamp_new, previous_intersected_line_oneway_new, previous_target_intersected_line_oneway_new = getLocationResult(
@@ -1254,6 +1272,9 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
                         new_solution['closest_point_on_line'].coords)[0][1]
 
                     # calculte current location result with new solution
+                    # TODO: FIXME: Setting new_solution['oneway'] to
+                    # bidirectional
+                    new_solution['oneway'] = 'B'
                     current_location_result_new, source_new, target_new, intersected_line_new, target_intersected_line_new, timestamp_new, intersected_line_oneway_new, target_intersected_line_oneway_new = getLocationResult(
                         filepath_shp, x, y, passenger, timestamp, (new_solution_point_x, new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], new_solution['oneway'], minNumberOfLines)
 
@@ -1441,7 +1462,7 @@ def plotAndSaveHistogram(input, minXLabel, maxXLabel, binSize, filename, title, 
 
     Notes
     -----
-    The plot is saved in PNG format. 
+    The plot is saved in PNG format.
     """
     # get the max value of the imputs
     maxInput = max(input)
@@ -1783,20 +1804,32 @@ def caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_st
 
 
 def main():
-
+    import glob
     global number_of_txt_files
     global current_txt_file
 
-    filepath_shp = 'Data/taxi_san_francisco/San Francisco Basemap Street Centerlines/geo_export_e5dd0539-2344-4e87-b198-d50274be8e1d.shp'
+    # TODO: To use this code, I need a shapefile of the road network
+    #filepath_shp = 'Data/taxi_san_francisco/San Francisco Basemap Street Centerlines/geo_export_e5dd0539-2344-4e87-b198-d50274be8e1d.shp'
+    filepath_shp = 'Data/netmob-2025/road_network.shp'
 
-    filepaths = []
-    
-    filepaths.append("Data/testData/testTaxi.txt")
+    # TODO NOTE: Despite appearances, the shapefile graph is only constructed
+    # once, but it is made a global variable (search for "global DG" to find
+    # the spot where it is defined). So if we run multiple files, we will only
+    # construct the graph once
+
+
+    input_filepath = "Data/netmob-2025/extracted_trajectories_by_mode/PRIV_CAR_DRIVER/"
+    filepaths = glob.glob(f"{input_filepath}*.txt")
+
+    #filepaths = []
+    #filepaths.append("Data/testData/testTaxi.txt")
+    #filepaths.append("Data/netmob-2025/extracted_trajectories_by_mode/PRIV_CAR_DRIVER/42_0061-saturday-44856-4.txt")
+    #filepaths.append("Data/netmob-2025/extracted_trajectories_by_mode/PRIV_CAR_DRIVER/42_0034-thursday-44854-1.txt")
     #filepaths.append("Data/taxi_san_francisco/cabspottingdata/taxi1.txt")
     #filepaths.append("Data/taxi_san_francisco/cabspottingdata/taxi2.txt")
 
     number_of_txt_files = len(filepaths)
-
+    print(f"Number of files identified: {number_of_txt_files}.")
     # loop through all the filepaths
     for path in filepaths:
 
@@ -1850,6 +1883,9 @@ def main():
         print('- ' + new_filename_velocities)
         print('- ' + new_filename_path_length_air_line_length)
 
+        # Convert to geometry file
+        df_traj = pd.read_csv(new_filename_solution, sep=";")
+        df_traj["path_as_linestring"][df_traj["path_as_linestring"].notna()].to_csv(f"{new_filename_solution[0:len(new_filename_solution)-4]}_notna.csv", header=False, index=False)
 
 if __name__ == '__main__':
     import doctest
