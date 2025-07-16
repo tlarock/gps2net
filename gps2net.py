@@ -1640,7 +1640,7 @@ def getFilename(path):
     return filename
 
 
-def caculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
+def calculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
                             new_filename_statistics, new_filename_velocities,
                             new_filename_path_length_air_line_length, filepath,
                             current_txt_file, number_of_txt_files):
@@ -1893,7 +1893,7 @@ def main():
 
         try:
             # calculate and save the full solution (most likely paths) based on the underlying street network
-            caculationForOneTXTFile(filepath_shp, DG, new_filename_solution, new_filename_statistics,
+            calculationForOneTXTFile(filepath_shp, DG, new_filename_solution, new_filename_statistics,
                                     new_filename_velocities,
                                     new_filename_path_length_air_line_length,
                                     path, current_txt_file, number_of_txt_files)
