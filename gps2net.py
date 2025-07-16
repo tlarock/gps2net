@@ -50,7 +50,7 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
     """
 
     def temporarily_add_edge_to_graph(DG, startNode, endNode, edgeWeight, edgeId, direction):
-        '''Temporarily adds an edge to the global graph.
+        '''Temporarily adds an edge to the graph.
 
         Parameters
         ----------
@@ -70,7 +70,7 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
         -----
         This function is only called in the following function: :func:`~gps2net.getShortestPathAStar`
 
-        This function temporarily adds an edge to the global graph. It only adds the edge if it deosn't exist in the graph yet. Further, the new edge is added to the list 'all_added_edges' so that it can be removed again in the end.
+        This function temporarily adds an edge to the graph. It only adds the edge if it deosn't exist in the graph yet. Further, the new edge is added to the list 'all_added_edges' so that it can be removed again in the end.
         '''
         if (not DG.has_edge(startNode, endNode)):
             # edge has to be added
@@ -1360,10 +1360,9 @@ def write_statistics(new_filename_statistics, filepath_shp, filepath,
         new_file.write('\n')
         new_file.write('\n')
 
-def main():
-    import argparse
-    import glob
 
+def parse_args():
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--shapefile",
                         help="Path to shapefile of road network.",
@@ -1378,13 +1377,13 @@ def main():
     parser.add_argument("--input-filename",
                         help="Name of input file located in input-dir. If \
                         --filename-is-glob is also given, input-filename is \
-                        assumed to be a regex pattern passed to glob.glob.",
+                        assumed to be a regex pattern passed to Path.glob.",
                         type=str,
                         default="testTaxi.txt"
                         )
     parser.add_argument("--filename-is-glob",
                         help="If given, input-filename is assumed to be a regex \
-                        pattern that will be passed into glob.glob.",
+                        pattern that will be passed into Path.glob.",
                         action="store_true"
                         )
     parser.add_argument("--output-dir",
@@ -1394,6 +1393,16 @@ def main():
                         )
 
     args = parser.parse_args()
+
+    return args
+
+if __name__ == '__main__':
+    import doctest
+    # running 'doctest.testmod()' test the examples in docstrings. Alternatively, the examples in docstrings can be tested by commenting out 'main()' and then navigating to the 'docs' directory and running the following command in the terminal (this will also show the test results for passed tests): python gps2net.py -v
+    testResults = doctest.testmod()
+    print(testResults)
+
+    args = parse_args()
 
     # Get the shapefile name
     filepath_shp = pl.Path(args.shapefile)
@@ -1461,6 +1470,7 @@ def main():
         myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
         path, filepath_shp, DG, current_txt_file, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
 
+        # Write the results
         write_solution_output(new_filename_solution, myCalculatedSolution)
         velocities_none_counter = generate_velocity_histogram(new_filename_velocities, myCalculatedSolution)
         generate_distances_histogram(new_filename_path_length_air_line_length, myCalculatedSolution)
@@ -1490,14 +1500,3 @@ def main():
         print('- ' + new_filename_statistics.as_posix())
         print('- ' + new_filename_velocities.as_posix())
         print('- ' + new_filename_path_length_air_line_length.as_posix())
-
-
-
-if __name__ == '__main__':
-    import doctest
-    # running 'doctest.testmod()' test the examples in docstrings. Alternatively, the examples in docstrings can be tested by commenting out 'main()' and then navigating to the 'docs' directory and running the following command in the terminal (this will also show the test results for passed tests): python gps2net.py -v
-    testResults = doctest.testmod()
-    print(testResults)
-
-    # run the main method
-    main()
