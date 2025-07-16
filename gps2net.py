@@ -6,6 +6,7 @@ import doctest
 import math
 import os
 import sys
+import pathlib as pl
 
 import fiona
 import matplotlib.pyplot as plt
@@ -91,7 +92,7 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
     path_length = None
     path_IDs = []
     all_added_edges = []
- 
+
     # check if target lies exactly on the beginning/end of a line segment
     # if yes, target already exists as a node in the graph
     if (target not in target_line):
@@ -278,7 +279,7 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
         # no path was found
         pass
 
-    # remove all the edges which where added to the graph.
+    # remove all the edges which were added to the graph.
     DG.remove_edges_from(all_added_edges)
 
     return path, path_length, path_IDs
@@ -329,7 +330,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
         - timestamp : int
             Time is in UNIX epoch format.
 
-        In addition to those four values, every dictionary contains the following parameters which where computed by the algorithm (key : type):
+        In addition to those four values, every dictionary contains the following parameters which were computed by the algorithm (key : type):
 
         - closest_intersection_x : float
             Longitude of the mapped position based on underlying network topology.
@@ -380,7 +381,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
             The id of street where the mapped point lies on.
 
         - solution_index : int
-            The index of the chosen solution. All possible solutions are in a list which is sorted by the distance of the solution to the GPS position. 0 means that the point was mapped to the closest intersection with a street. If this solution does not seem to be probable, other (further away) solution where checked and if one of these solutions yielded a better outcome (e.g. shorter paths) than the index of this solution is taken. Consequently, solution_index=3 means that the third-closest solution was chosen.
+            The index of the chosen solution. All possible solutions are in a list which is sorted by the distance of the solution to the GPS position. 0 means that the point was mapped to the closest intersection with a street. If this solution does not seem to be probable, other (further away) solution were checked and if one of these solutions yielded a better outcome (e.g. shorter paths) than the index of this solution is taken. Consequently, solution_index=3 means that the third-closest solution was chosen.
 
         - path_from_target_to_source : {0, 1}
             1 means that the on the 'oneway'-property was ignored. In this case the path might actually be the path from the target to the source. This is done when the algorithm detects a GPS glipse (the vehicle seems to drive a tiny bit backwards on a oneway street which is not possible) which resulted in a wrong path.
@@ -405,7 +406,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
         The statistics contain the following numbers (all of type int):
 
         - outlier : int
-            Number of data points which where flagged as outliers.
+            Number of data points which were flagged as outliers.
         - taxi_did_not_move : int
             Number of times when a data point's GPS position was identical to the GPS position of the previous data point.
         - no_path_found : int
@@ -1337,33 +1338,6 @@ def getPathFromUnmappedGpsPositions(filepath, new_filename):
                 time_previous = time_current
 
 
-def getFilename(path):
-    '''Returns the name of a file from a specific path (excluding directories and extension).
-
-    Parameters
-    ----------
-    path : str
-        The path of a specific data file.
-
-    Returns
-    -------
-    str
-        The name of the file. Namely, the last part of the path (excluding the extgension).
-
-
-    Examples
-    --------
-
-    >>> myPath = 'dir1/dir2/ThisIsMyFilename.txt'
-    >>> filename = getFilename(myPath)
-    >>> filename
-    'ThisIsMyFilename'
-
-    '''
-    # get the name of the file from the path (without the directories and without extension)
-    filename = os.path.splitext(os.path.basename(os.path.normpath(path)))[0]
-    return filename
-
 
 def calculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
                             new_filename_statistics, new_filename_velocities,
@@ -1556,98 +1530,98 @@ def main():
 
     args = parser.parse_args()
 
-    # TODO: To use this code, I need a shapefile of the road network
-    #filepath_shp = 'Data/taxi_san_francisco/San Francisco Basemap Street Centerlines/geo_export_e5dd0539-2344-4e87-b198-d50274be8e1d.shp'
-    #filepath_shp = 'Data/netmob-2025/road_network.shp'
-    filepath_shp = args.shapefile
+    # Get the shapefile name
+    filepath_shp = pl.Path(args.shapefile)
+    if not filepath_shp.exists():
+        print(f"No shapefile found at {filepath_shp}. Exiting.")
+        sys.exit(1)
 
     # Create directed graph from shape file
     DG = createGraphFromSHPInput(filepath_shp)
 
-    #input_filepath = "Data/netmob-2025/smoothed_trajectories_by_mode/PRIV_CAR_DRIVER/"
-    #filepaths = glob.glob(f"{input_filepath}*.txt")
-    input_dir = args.input_dir
-    input_filename = args.input_filename
+    # Get the directory and name of the input GPS coordinate files
+    input_dir = pl.Path(args.input_dir)
+    if not input_dir.exists() or not input_dir.is_dir():
+        print(f"Directory {input_dir} does not exist or is not a directory. Exiting.")
+        sys.exit(1)
+
 
     if not args.filename_is_glob:
-        filepaths = [input_dir + "/" + input_filename]
+        input_filename = pl.Path(args.input_filename)
+        # The input is a single file, so filepaths is a list containing only
+        # the input file
+        filepaths = [input_dir / input_filename]
     else:
-        filepaths = glob.glob(input_dir + "/" + input_filename)
+        # The input is a pattern for glob, so use glob to read all input files
+        # in the input directory.
+        filepaths = list(input_dir.glob(args.input_filename))
 
-    output_dir = args.output_dir
+        # Validate glob-based filepaths. Make sure filepaths:
+        # 1. Is not an empty list
+        if len(filepaths) == 0:
+            print(f"No files returned based on glob pattern {input_dir}/{args.input_filename}. Exiting.")
+            sys.exit(1)
+        # TODO: 2. Contains non-empty files in an apporpriate format
 
-    #filepaths = []
-    #filepaths.append("Data/testData/testTaxi.txt")
-    #filepaths.append("Data/netmob-2025/extracted_trajectories_by_mode/PRIV_CAR_DRIVER/42_0061-saturday-44856-4.txt")
-    #filepaths.append("Data/netmob-2025/extracted_trajectories_by_mode/PRIV_CAR_DRIVER/42_0034-thursday-44854-1.txt")
-    #filepaths.append("Data/taxi_san_francisco/cabspottingdata/taxi1.txt")
-    #filepaths.append("Data/taxi_san_francisco/cabspottingdata/taxi2.txt")
+    # Create the output directory
+    output_dir = pl.Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     current_txt_file = 0
     number_of_txt_files = len(filepaths)
     print(f"Number of files identified: {number_of_txt_files}.")
+
     # loop through all the filepaths
     for path in filepaths:
 
         current_txt_file += 1
 
-        new_filename = getFilename(path)
+        new_filename = path.stem
 
-        dirName = os.path.join(output_dir, new_filename)
+        dirName = output_dir / new_filename
 
         # Create target directory & all intermediate directories if don't exists
-        try:
-            os.makedirs(dirName)
-            print('')
-            print('Directory ', dirName,  ' created.')
-        except FileExistsError:
-            print('')
-            print('Directory ', dirName,  ' already exists.')
+        dirName.mkdir(parents=True, exist_ok=True)
+        new_filename_simple_solution = dirName / 'pathFromUnmappedGpsPositions.txt'
 
-        new_filename_simple_solution = os.path.join(
-            dirName, 'pathFromUnmappedGpsPositions') + '.txt'
-
-        new_filename_solution = os.path.join(
-            dirName, 'calculatedSolution') + '.txt'
-        new_filename_statistics = os.path.join(dirName, 'statistics') + '.txt'
-        new_filename_velocities = os.path.join(dirName, 'velocitiesPLOT.png')
-        new_filename_path_length_air_line_length = os.path.join(
-            dirName, 'path_length_air_line_length_PLOT.png')
+        new_filename_solution = dirName / 'calculatedSolution.txt'
+        new_filename_statistics = dirName / 'statistics.txt'
+        new_filename_velocities = dirName / 'velocitiesPLOT.png'
+        new_filename_path_length_air_line_length = dirName / 'path_length_air_line_length_PLOT.png'
 
         # calculate and save the simple solution (path from exact gps positions without considering the underlying street network)
         getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
 
-        try:
-            # calculate and save the full solution (most likely paths) based on the underlying street network
-            calculationForOneTXTFile(filepath_shp, DG, new_filename_solution, new_filename_statistics,
-                                    new_filename_velocities,
-                                    new_filename_path_length_air_line_length,
-                                    path, current_txt_file, number_of_txt_files)
-        except Exception as e:
-            print(e)
-            print(traceback.format_exc())
-            continue
+        # calculate and save the full solution (most likely paths) based on the underlying street network
+        calculationForOneTXTFile(filepath_shp, DG, new_filename_solution, new_filename_statistics,
+                                new_filename_velocities,
+                                new_filename_path_length_air_line_length,
+                                path, current_txt_file, number_of_txt_files)
 
         # get all timestamp differences of a text file
         timeDifferences = getTimeDifferences(path, 3)
 
-        timedifferencesFileName = os.path.join(
-            dirName, 'timedifferencesPLOT.png')
+        timedifferencesFileName = dirName / 'timedifferencesPLOT.png'
 
         # plot the timeDifferences in a histogram
         plotAndSaveHistogram(timeDifferences, 0, 300, 25, timedifferencesFileName,
                              'Histogram of time differences between gps points', 'time difference in seconds')
 
-        print('')
-        print('The following files where created:')
-        print('- ' + new_filename_simple_solution)
-        print('- ' + new_filename_solution)
-        print('- ' + new_filename_statistics)
-        print('- ' + new_filename_velocities)
-        print('- ' + new_filename_path_length_air_line_length)
-
         # Convert to geometry file
         df_traj = pd.read_csv(new_filename_solution, sep=";")
-        df_traj["path_as_linestring"][df_traj["path_as_linestring"].notna()].to_csv(f"{new_filename_solution[0:len(new_filename_solution)-4]}_notna.csv", header=False, index=False)
+        linestring_output_file = dirName / 'calculatedSolution_notna.csv'
+        df_traj["path_as_linestring"][df_traj["path_as_linestring"].notna()].to_csv(linestring_output_file, header=False, index=False)
+
+        print('')
+        print('The following files were created:')
+        print('- ' + new_filename_simple_solution.as_posix())
+        print('- ' + new_filename_solution.as_posix())
+        print('- ' + linestring_output_file.as_posix())
+        print('- ' + new_filename_statistics.as_posix())
+        print('- ' + new_filename_velocities.as_posix())
+        print('- ' + new_filename_path_length_air_line_length.as_posix())
+
+
 
 if __name__ == '__main__':
     import doctest
