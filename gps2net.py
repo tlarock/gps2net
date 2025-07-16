@@ -17,8 +17,6 @@ from shapely.geometry import LineString, Point
 # global variable: empty Directed Graph
 DG = nx.DiGraph()
 current_txt_file = 0
-number_of_txt_files = 0
-
 
 def blockPrint():
     '''This method is used to disable print() messages.
@@ -571,7 +569,7 @@ def getShortestPathAStar(source, target, source_line, target_line, source_line_o
     return path, path_length, path_IDs
 
 
-def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0):
+def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0):
     '''Maps GPS positions to the most likely points (based on the underlying street network) and obtains the most likely paths between those points based on the underlying street network.
 
     Parameters
@@ -1032,7 +1030,6 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
         return location_result, (closest_intersection_x, closest_intersection_y), previous_point, intersected_line, previous_intersected_line, timestamp, intersected_line_oneway, previous_intersected_line_oneway
 
     global current_txt_file
-    global number_of_txt_files
 
     counter = 0
 
@@ -1651,7 +1648,10 @@ def getFilename(path):
     return filename
 
 
-def caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_statistics, new_filename_velocities, new_filename_path_length_air_line_length, filepath):
+def caculationForOneTXTFile(filepath_shp, new_filename_solution,
+                            new_filename_statistics, new_filename_velocities,
+                            new_filename_path_length_air_line_length, filepath,
+                            number_of_txt_files):
     """Calculates the most likely solution for one entire txt file based on the underlying street network and saves the solution.
 
     Parameters
@@ -1674,7 +1674,7 @@ def caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_st
     header = ['latitude(y);longitude(x);hasPassenger;time;closest_intersection_x;closest_intersection_y;relative_position;relative_position_normalized;intersected_line_oneway;intersected_line_as_linestring;linestring_adjustment_visualization;path_time;path_as_linestring;path_length;air_line_length;path_length/air_line_length;velocity_m_s;pathIDs;solution_id;solution_index;path_from_target_to_source;taxi_did_not_move;second_best_solution_yields_more_found_paths;NO_PATH_FOUND;outlier;comment\n']
 
     myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
-        filepath, filepath_shp, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
+        filepath, filepath_shp, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
 
     # this saves a new text file which includes the calculated parameters
     with open(new_filename_solution, 'w') as new_file:
@@ -1839,7 +1839,6 @@ def main():
 
     args = parser.parse_args()
 
-    global number_of_txt_files
     global current_txt_file
 
     # TODO: To use this code, I need a shapefile of the road network
@@ -1908,7 +1907,9 @@ def main():
         try:
             # calculate and save the full solution (most likely paths) based on the underlying street network
             caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_statistics,
-                                    new_filename_velocities, new_filename_path_length_air_line_length, path)
+                                    new_filename_velocities,
+                                    new_filename_path_length_air_line_length,
+                                    path, number_of_txt_files)
         except Exception as e:
             print(e)
             continue
