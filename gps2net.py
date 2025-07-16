@@ -15,6 +15,44 @@ from utils import *
 from plotting_functions import *
 
 
+def temporarily_add_edge_to_graph(DG, startNode, endNode, edgeWeight, edgeId,
+                                  direction, all_added_edges):
+    '''Temporarily adds an edge to the graph.
+
+    Parameters
+    ----------
+    startNode : tuple (float, float)
+        [description]
+    endNode : tuple (float, float)
+        [description]
+    edgeWeight : int
+        The edgeweight is the distance between the startNode and the endNode in meters.
+    edgeId : int
+        The id of the street (LineString) which the linesegment belongs to according to the shapefile.
+    direction : {'B', 'F', 'T'}
+        The 'oneway'-property of the street (LineString) which the linesegment belongs to according to the shapefile.
+        The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
+
+    Notes
+    -----
+    This function is only called in the following function: :func:`~gps2net.getShortestPathAStar`
+
+    This function temporarily adds an edge to the graph. It only adds the edge if it deosn't exist in the graph yet. Further, the new edge is added to the list 'all_added_edges' so that it can be removed again in the end.
+    '''
+    if (not DG.has_edge(startNode, endNode)):
+        # edge has to be added
+        # print('adding ({},{})'.format(startNode, endNode))
+
+        DG.add_edge(startNode, endNode, weight=edgeWeight,
+                    id=edgeId, oneway=direction)
+        all_added_edges.append((startNode, endNode))
+    else:
+        # edge is already in graph
+        # print('graph does have({},{})'.format(startNode,endNode))
+        # print('edge:',DG.get_edge_data(startNode, endNode))
+        pass
+
+
 def getShortestPathAStar(DG, source, target, source_line, target_line, source_line_oneway, target_line_oneway, filepath_shp, ignore_oneway=False):
     """Calculates the shortest – most likely – path between two GPS positions (on a street segment) based on the streets of the underlying network.
 
@@ -48,43 +86,6 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
     path_IDs : list
         The path IDs of all street segments which are traversed on the path.
     """
-
-    def temporarily_add_edge_to_graph(DG, startNode, endNode, edgeWeight, edgeId, direction):
-        '''Temporarily adds an edge to the graph.
-
-        Parameters
-        ----------
-        startNode : tuple (float, float)
-            [description]
-        endNode : tuple (float, float)
-            [description]
-        edgeWeight : int
-            The edgeweight is the distance between the startNode and the endNode in meters.
-        edgeId : int
-            The id of the street (LineString) which the linesegment belongs to according to the shapefile.
-        direction : {'B', 'F', 'T'}
-            The 'oneway'-property of the street (LineString) which the linesegment belongs to according to the shapefile.
-            The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
-
-        Notes
-        -----
-        This function is only called in the following function: :func:`~gps2net.getShortestPathAStar`
-
-        This function temporarily adds an edge to the graph. It only adds the edge if it deosn't exist in the graph yet. Further, the new edge is added to the list 'all_added_edges' so that it can be removed again in the end.
-        '''
-        if (not DG.has_edge(startNode, endNode)):
-            # edge has to be added
-            # print('adding ({},{})'.format(startNode, endNode))
-
-            DG.add_edge(startNode, endNode, weight=edgeWeight,
-                        id=edgeId, oneway=direction)
-            all_added_edges.append((startNode, endNode))
-        else:
-            # edge is already in graph
-            # print('graph does have({},{})'.format(startNode,endNode))
-            # print('edge:',DG.get_edge_data(startNode, endNode))
-            pass
-
     path = None
     path_length = None
     path_IDs = []
@@ -128,27 +129,35 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
 
             # add edges in both directions
             temporarily_add_edge_to_graph(DG, edge_target_start, target, air_line_distance(
-                edge_target_start, target), graph_edge_id, graph_edge_oneway)
+                edge_target_start, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, target, edge_target_end, air_line_distance(
-                edge_target_end, target), graph_edge_id, graph_edge_oneway)
+                edge_target_end, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, edge_target_end, target, air_line_distance(
-                edge_target_end, target), graph_edge_id, graph_edge_oneway)
+                edge_target_end, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, target, edge_target_start, air_line_distance(
-                edge_target_start, target), graph_edge_id, graph_edge_oneway)
+                edge_target_start, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
             temporarily_add_edge_to_graph(DG, edge_target_start, target, air_line_distance(
-                edge_target_start, target), graph_edge_id, graph_edge_oneway)
+                edge_target_start, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, target, edge_target_end, air_line_distance(
-                edge_target_end, target), graph_edge_id, graph_edge_oneway)
+                edge_target_end, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
 
         else:
             # add edges in direction of to-node to from-node
             temporarily_add_edge_to_graph(DG, target, edge_target_start, air_line_distance(
-                edge_target_start, target), graph_edge_id, graph_edge_oneway)
+                edge_target_start, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, edge_target_end, target, air_line_distance(
-                edge_target_end, target), graph_edge_id, graph_edge_oneway)
+                edge_target_end, target), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
 
     else:
         # no need to add additional edges target
@@ -198,57 +207,101 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
             # add adges in both directions
             if(source_line_oneway == 'B' or ignore_oneway == True):
                 temporarily_add_edge_to_graph(DG, source, target,
-                                              air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
+                                              air_line_distance(source,
+                                                                target),
+                                              graph_edge_id, graph_edge_oneway,
+                                              all_added_edges)
                 temporarily_add_edge_to_graph(DG, target, source,
-                                              air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
+                                              air_line_distance(source,
+                                                                target),
+                                              graph_edge_id, graph_edge_oneway,
+                                              all_added_edges)
 
             # add adges in only one direction
             elif(source_line_oneway == 'F'):
                 # if the source_line (which equals target_line) is oneway from the from-node to the to-node, the point which is closer to the beginning of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
                     temporarily_add_edge_to_graph(DG, target, source,
-                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
+                                                  air_line_distance(source,
+                                                                    target),
+                                                  graph_edge_id,
+                                                  graph_edge_oneway,
+                                                  all_added_edges)
                 else:
                     temporarily_add_edge_to_graph(DG, source, target,
-                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
+                                                  air_line_distance(source,
+                                                                    target),
+                                                  graph_edge_id,
+                                                  graph_edge_oneway,
+                                                  all_added_edges)
 
             # add adges in only one direction
             elif(source_line_oneway == 'T'):
                 # if the source_line (which equals target_line) is oneway from the to-node to the from-node, the point which is closer to the end of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
                     temporarily_add_edge_to_graph(DG, source, target,
-                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
+                                                  air_line_distance(source,
+                                                                    target),
+                                                  graph_edge_id,
+                                                  graph_edge_oneway,
+                                                  all_added_edges)
                 else:
                     temporarily_add_edge_to_graph(DG, target, source,
-                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
+                                                  air_line_distance(source,
+                                                                    target),
+                                                  graph_edge_id,
+                                                  graph_edge_oneway,
+                                                  all_added_edges)
 
         # add the line segments for the source as edges to the graph
 
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
             # add edges in direction of from-node to to-node
             temporarily_add_edge_to_graph(DG, edge_source_start, source,
-                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
+                                          air_line_distance(edge_source_start,
+                                                            source),
+                                          graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, source, edge_source_end,
-                                          air_line_distance(edge_source_end, source), graph_edge_id, graph_edge_oneway)
+                                          air_line_distance(edge_source_end,
+                                                            source),
+                                          graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             # add edges in direction of to-node to from-node
             temporarily_add_edge_to_graph(DG, edge_source_end, source,
-                                          air_line_distance(edge_source_end, source), graph_edge_id, graph_edge_oneway)
+                                          air_line_distance(edge_source_end,
+                                                            source),
+                                          graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, source, edge_source_start,
-                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
+                                          air_line_distance(edge_source_start,
+                                                            source),
+                                          graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
             temporarily_add_edge_to_graph(DG, edge_source_start, source,
-                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
+                                          air_line_distance(edge_source_start,
+                                                            source),
+                                          graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, source, edge_source_end,
-                                          air_line_distance(edge_source_end, source), graph_edge_id, graph_edge_oneway)
+                                          air_line_distance(edge_source_end,
+                                                            source),
+                                          graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
 
         else:
             # add edges in direction of to-node to from-node
             temporarily_add_edge_to_graph(DG, edge_source_end, source, air_line_distance(
-                edge_source_end, source), graph_edge_id, graph_edge_oneway)
+                edge_source_end, source), graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
             temporarily_add_edge_to_graph(DG, source, edge_source_start,
-                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
+                                          air_line_distance(edge_source_start,
+                                                            source),
+                                          graph_edge_id, graph_edge_oneway,
+                                          all_added_edges)
 
     try:
         # try to find a path
@@ -281,6 +334,324 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
 
     return path, path_length, path_IDs
 
+def getLocationResult(filepath_shp, DG, x, y, passenger, timestamp,
+                      previous_point, previous_intersected_line,
+                      previous_timestamp, previous_intersected_line_oneway,
+                      statistics,
+                      minNumberOfLines=2):
+    """Calculates all additional parameters for one GPS position (which corresponds to one line in the txt file).
+
+    Parameters
+    ----------
+    filepath_shp : str
+        The path where the shp file (which contains the street data) is stored.
+    DG : nx.DiGraph
+        Directed graph built from filepath_shp
+    y : float
+        Latitude of the GPS position in decimal degrees.
+    x : float
+        Longitude of the GPS position in decimal degrees.
+    passenger : {0, 1}
+        Occupancy shows if a cab has a fare (1 = occupied, 0 = free).
+    timestamp : int
+        Time is in UNIX epoch format.
+    previous_point : tuple of float
+        GPS position of the mapped previous point based on the underlying street structure.
+    previous_intersected_line : list of coordinates
+        The previous_intersected_line is a list of GPS coordinates. These coordinates represent the street on which the mapped previous point lies.
+    previous_timestamp : int
+        Time of the previous point (in UNIX epoch format).
+    previous_intersected_line_oneway : [list of coordinates
+        The 'oneway'-property of the previous_intersected_line. The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
+    minNumberOfLines : int, optional
+        The min number of lines is just needed to increse areasize. This means that the areasize is increased as long as minNumberOfLines is not found and max areasize is not exeeded.
+        A GPS position is only marked as an outlier if NOT EVEN A SINGLE STREET could be found in the area
+        By default 2.
+
+    Notes
+    -----
+    This function is only called in the following function: :func:`~gps2net.calculateMostLikelyPointAndPaths`
+
+    The additional parameters are calculated in this function. However, the solution is not saved. When the next GPS position is looked at, the result is validated and only if then it still found to be the most likely result is saved as such.
+    However, if then another result (namely, mapping the GPS position to another street which yields a result which lies further away from the GPS location) is found to be more likely, the initial result is overridden.
+
+    Returns
+    -------
+    location_result : dict
+        This dict contains the main solution. More specific, the additional attribute which will be written to the output file (after validation).
+    (closest_intersection_x, closest_intersection_y) : tuple of float
+        GPS position of the mapped point based on the underlying street structure.
+    previous_point : tuple of float
+        GPS position of the mapped previous point based on the underlying street structure.
+    intersected_line : list of coordinates
+        The intersected_line is a list of GPS coordinates. These coordinates represent the street on which the mapped point (closest_intersection_x, closest_intersection_y) lies.
+    previous_intersected_line : list of coordinates
+        The previous_intersected_line is a list of GPS coordinates. These coordinates represent the street on which the mapped previous point lies.
+    timestamp : int
+        Time is in UNIX epoch format.
+    intersected_line_oneway : {'B', 'F', 'T'}
+        The 'oneway'-property of the intersected_line. The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
+    previous_intersected_line_oneway : list of coordinates
+        The 'oneway'-property of the previous_intersected_line. The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
+    """
+
+    location_result = {}
+    # all the paths who were not changed from source-->target to target-->source have the following property
+    path_from_target_to_source = 0
+
+    closest_intersection_x = 0
+    closest_intersection_y = 0
+    intersected_line = None
+    intersected_line_oneway = None
+
+    # initiaize all keys (as some of them are not necessarily set, e.g. when previous point was an outlier)
+
+    location_result['solution_index'] = 0
+    location_result['target'] = previous_point
+    if (previous_intersected_line != None):
+        location_result['previous_intersected_line'] = previous_intersected_line
+    else:
+        location_result['previous_intersected_line'] = ''
+
+    if(previous_intersected_line_oneway != None):
+        location_result['previous_intersected_line_oneway'] = previous_intersected_line_oneway
+    else:
+        location_result['previous_intersected_line_oneway'] = ''
+
+    location_result['path_time'] = ''
+    location_result['path'] = ''
+    location_result['path_length'] = ''
+    location_result['air_line_length'] = ''
+    location_result['path_length/air_line_length'] = ''
+    location_result['velocity_m_s'] = ''
+    location_result['pathIDs'] = ''
+    location_result['comment'] = ''
+    location_result['path_from_target_to_source'] = ''
+    location_result['closest_intersection_x'] = ''
+    location_result['closest_intersection_y'] = ''
+    location_result['relative_position'] = ''
+    location_result['relative_position_normalized'] = ''
+    location_result['intersected_line'] = ''
+    location_result['intersected_line_oneway'] = ''
+    location_result['linestring_adjustment_visualization'] = ''
+
+    location_result['solution_id'] = ''
+    location_result['taxi_did_not_move'] = 0
+    location_result['second_best_solution_yields_more_found_paths'] = 0
+    location_result['NO_PATH_FOUND'] = 0
+    location_result['outlier'] = 0
+
+    comment = ''
+
+    location_result['x'] = x
+    location_result['y'] = y
+    location_result['source'] = (x, y)
+    location_result['passenger'] = passenger
+    location_result['timestamp'] = timestamp
+    location_result['previous_timestamp'] = previous_timestamp
+
+    # how to get the closest line from one point
+
+    gps_point = Point(x, y)  # radial sweep centre point
+
+    with fiona.open(filepath_shp) as street_lines:
+        # define size of area to filter streets. The areasize is measured in decimal degrees.
+        # an areasize of 0.001 is (in the area of San Francisco) approximately 88 meters for longitudes and approximately 111 meters for latitude. This means that if the areasize s 0.001, streets are searched in an area of approximately 196 (longitude) times 222 meters (latitute), since the aresize is added in all four directions of a GPS position. Or an even broader approximation:
+        # an areasize of 0.001 means that an area of approx. 200x200 meters is covered.
+        # an areasize of 0.0005 means that an area of approx. 50x50 meters is covered.
+        areasize = 0.0005
+        max_areasize = 0.001
+
+        # the min number of lines is just needed to increse areasize. This means that the areasize is increased as long as minNumberOfLines is not found and max areasize is not exeeded.
+        # a GPS position is only marked as an outlier if NOT EVEN A SINGLE STREET could be found in the area
+        number_of_streets = 0
+
+        while ((number_of_streets < minNumberOfLines) and (areasize < max_areasize)):
+
+            input_shapes = list(street_lines.items(
+                bbox=((x-areasize), (y-areasize), (x+areasize), (y+areasize))))
+
+            number_of_streets = len(input_shapes)
+
+            # double are size so that if no lines are found, a bigger area is taken into account when filtering
+            areasize = areasize*1.25
+
+    # point is oulier only if not even a single street was found
+    if(number_of_streets == 0):
+        comment += 'This point is an outlier. '
+
+        # makes sure that next point doesn't calculate shortest path
+        previous_point = (0, 0)
+
+        # set the outlier property of the solution to 1
+        location_result['outlier'] = 1
+
+    # point is not an outlier
+    else:
+
+        solution_dict = {}
+
+        for input_line in input_shapes:
+
+            lineID = input_line[1]['id']
+
+            newLS = LineString(input_line[1]['geometry']['coordinates'])
+            # get the distance along the LineString to a point nearest to the point
+            relative_position = newLS.project(gps_point)
+            # get the distance normalized to the length of the LineString
+            relative_position_normalized = newLS.project(
+                gps_point, normalized=True)
+
+            closest_point_on_line = newLS.interpolate(relative_position)
+
+            inter_dict_point = {}
+
+            inter_dict_point['closest_point_on_line'] = closest_point_on_line
+            inter_dict_point['relative_position_closest_point_on_line'] = relative_position
+            inter_dict_point['relative_position_normalized_closest_point_on_line'] = relative_position_normalized
+            inter_dict_point['input_line'] = newLS
+
+            #inter_dict_point['oneway'] = input_line[1]['properties']['oneway']
+
+            # distance needs to be float so that it can be sorted appropriately afterwards
+            inter_dict_point['distance'] = float(
+                gps_point.distance(closest_point_on_line))
+
+            solution_dict[lineID] = inter_dict_point
+
+        # sort the nested dict by the 'distance' which lies within all the inner dicts
+        # the first element in the sorted dict is the point with the shortest distance to the gps_point
+        solution_dict_sorted_by_distance = sorted(
+            solution_dict.items(), key=lambda kv: (kv[1]['distance']))
+
+        # get the first element as it is the one with the smallest distance (which is the closest point)
+        solution_id = solution_dict_sorted_by_distance[0][0]
+        solution = solution_dict_sorted_by_distance[0][1]
+        location_result['all_solutions_sorted'] = solution_dict_sorted_by_distance
+        location_result['solution_id'] = solution_id
+        location_result['solution'] = solution
+
+        closest_intersection_x = solution['closest_point_on_line'].x
+        closest_intersection_y = solution['closest_point_on_line'].y
+        relative_position = solution['relative_position_closest_point_on_line']
+        relative_position_normalized = solution['relative_position_normalized_closest_point_on_line']
+
+        intersected_line = solution['input_line']
+        # TODO FIXME Fixing to "B"
+        intersected_line_oneway = "B"
+
+        # append x- and y-position of the mapped point, i.e. the closest point which lies on a street of the underlying network
+        location_result['closest_intersection_x'] = closest_intersection_x
+        location_result['closest_intersection_y'] = closest_intersection_y
+
+        # append the relative position / and the normalized relative position of the solution on the intersected line
+        location_result['relative_position'] = relative_position
+        location_result['relative_position_normalized'] = relative_position_normalized
+
+        # append the underlying map line on which the final point lies AND the oneway_property
+        location_result['intersected_line'] = intersected_line
+        location_result['intersected_line_oneway'] = intersected_line_oneway
+
+        # append the line which visualizes the way from the start point to the new position of the closest intersection point
+        linestring_adjustment_visualization = LineString(
+            [(gps_point.x, gps_point.y), (closest_intersection_x, closest_intersection_y)])
+
+        location_result['linestring_adjustment_visualization'] = linestring_adjustment_visualization
+
+        # check if previous point is set. if yes: calculate the shortest path from current point to previous point
+        if(previous_point == (0, 0)):
+            # no previous point set, do not calculate shortest path.
+            comment += 'Cannot compute shortest path as previous point is (0,0). '
+
+            # update statistics
+            statistics['cannot_compute_shortest_path_as_previous_point_is_outlier'] += 1
+
+        elif((closest_intersection_x, closest_intersection_y) == previous_point):
+            # if the taxi did not move, path is not created
+
+            comment += 'source==target --> Taxi did not move. '
+
+            location_result['path_length'] = 0
+            location_result['air_line_length'] = 0
+            location_result['path_length/air_line_length'] = 1
+            location_result['velocity_m_s'] = 0
+            location_result['taxi_did_not_move'] = 1
+
+            # update statistics
+            statistics['taxi_did_not_move'] += 1
+
+        else:
+
+            path_time = abs(previous_timestamp-timestamp)
+
+            location_result['path_time'] = path_time
+
+            path = None
+            path2 = None
+            # calculate the shortest path with A STAR algorithm
+            path, path_length, pathIDs = getShortestPathAStar(DG, (closest_intersection_x, closest_intersection_y), previous_point, list(
+                intersected_line.coords), list(previous_intersected_line.coords), intersected_line_oneway, previous_intersected_line_oneway, filepath_shp)
+
+
+            # calculate air line distance between source and target
+            air_line_length = distFrom(
+                closest_intersection_x, closest_intersection_y, previous_point[0], previous_point[1])
+
+            # if this is true, it is possible that a taxi has to ride all around the block because it is a oneway street and source and target lie on the same line
+            if(air_line_length < 20 and intersected_line_oneway != 'B' and previous_intersected_line_oneway != 'B' and (list(intersected_line.coords) == list(previous_intersected_line.coords))):
+
+                # calculate where the source lies on the line
+                d_source = LineString(list(intersected_line.coords)).project(
+                    Point(closest_intersection_x, closest_intersection_y))
+
+                # calculate where the target lies on the line
+                d_target = LineString(list(previous_intersected_line.coords)).project(
+                    Point(previous_point))
+
+                # check if there was a glipse in the gps coordinates which resulted in a situation where the source lies after the target on a oneway street
+                # if it is a oneway line from the FROM-node to the TO-node and source lies AFTER the target   OR   if it is a oneway line from the TO-node to the FROM-node and source lies BEFORE the target
+                if((intersected_line_oneway == 'F' and d_source > d_target)or(intersected_line_oneway == 'T' and d_source < d_target)):
+
+                    # calculate the shortest path with A STAR algorithm
+                    # set ignore_oneway=True : this makes sure that the source_line and the target_line both are treated as lines where driving in both directions is allowed (so feature 'oneway' is ignored)
+                    path2, path_length2, pathIDs2 = getShortestPathAStar(DG, (closest_intersection_x, closest_intersection_y), previous_point, list(intersected_line.coords), list(
+                        previous_intersected_line.coords), intersected_line_oneway, previous_intersected_line_oneway, filepath_shp, ignore_oneway=True)
+
+                # if the new solution is more likely to be correct, override path/path_lenght/pathIDs to make sure to use the new solution, i.e. the one which ignores the 'oneway' property
+                if((path == None and path2 != None) or (path != None and path2 != None and (path_length > path_length2))):
+                    path = path2
+                    path_length = path_length2
+                    pathIDs = pathIDs2
+                    comment += 'The oneway-property was ignored. '
+                    path_from_target_to_source = 1
+
+                    # update statistics
+                    statistics['path_from_target_to_source'] += 1
+
+            # if a path was found, append the solution to the calculatedSolution
+            if(path != None):
+                velocity_m_s = path_length/path_time
+
+                location_result['path'] = LineString(path)
+                location_result['path_length'] = path_length
+                location_result['air_line_length'] = air_line_length
+                location_result['path_length/air_line_length'] = path_length / \
+                    air_line_length
+                location_result['velocity_m_s'] = velocity_m_s
+                location_result['pathIDs'] = pathIDs
+                location_result['comment'] = comment
+
+            else:
+
+                # no previous point set, do not calculate shortest path.
+                printComment = 'No path was found with A Star algorithm from {} to {}. '.format(
+                    (closest_intersection_x, closest_intersection_y), previous_point)
+
+    location_result['path_from_target_to_source'] = path_from_target_to_source
+    location_result['comment'] = comment
+
+    return location_result, (closest_intersection_x, closest_intersection_y), previous_point, intersected_line, previous_intersected_line, timestamp, intersected_line_oneway, previous_intersected_line_oneway
+
 
 def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
                                      current_txt_file, number_of_txt_files,
@@ -290,24 +661,31 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
     Parameters
     ----------
     filepath : str
-        The path where the txt file (which contains the taxi mobility trace) is stored.
+        The path where the txt file (which contains the GPS trace) is stored.
     filepath_shp : str
         The path where the shp file (which contains the street data) is stored.
+    DG : nx.DiGraph
+        The directed graph built from the shapefile at filepath_shp
     minNumberOfLines : int, optional
+        The min number of lines is just needed to increse areasize. This means that the areasize is increased as long as minNumberOfLines is not found and max areasize is not exeeded.
+        A GPS position is only marked as an outlier if NOT EVEN A SINGLE STREET could be found in the area
         By default 2.
     criticalVelocity : float, optional
         The critical velocity is measured in m/s.
         The critical velocity defines the critical threashhold. If for any found solution the calculated velocity is above this threashhold the algorithm checks if there is another solution which would lead to a lower velocity.
         By default 35.0 m/s. This value was chosen since cars normally do not drive that fast.
+        TODO: NOTE: HIDDEN DEFAULT VALUE
     criticalPathLength : float, optional
         The critical PathLength defines the critical threashhold. If for any found solution the pathLength devided by the airLineLength above this threashhold the algorithm checks if there is another solution which would lead to a shorter path.
         By default 2.0. This value was chosen since the data with which the algorithm was evaluated showed that values higher than 2.0 are often due due to erroneously mapped points (e.g. if a gps point is close to a crossing and is then mapped to the wrong street). By checking other solutiones when the threashold is exeeded, more likely paths can be found and thereby the accuracy of the algorithm is improved.
-
+        TODO: NOTE: HIDDEN DEFAULT VALUE
 
     Notes
     -----
-    Every txt input file contains the mobility trace of a taxi. The format of each mobility trace file is the following - each line contains [latitude, longitude, occupancy, time], e.g.: [37.75134 -122.39488 0 1213084687], where latitude and longitude are in decimal degrees, occupancy shows if a cab has a fare (1 = occupied, 0 = free) and time is in UNIX epoch format.
+    Every txt input file should contain a GPS trace.
+    The format of the Taxi each mobility trace file is the following - each line contains [latitude, longitude, occupancy, time], e.g.: [37.75134 -122.39488 0 1213084687], where latitude and longitude are in decimal degrees, occupancy shows if a cab has a fare (1 = occupied, 0 = free) and time is in UNIX epoch format.
     The output 'linestring_adjustment_visualization' can be used to visualize the mapping of points, e.g. by adding it as a layer in GQIS (Layer > Add Layer > Add delimited text layer --> Choose WKT as geometry definition and 'linestring_adjustment_visualization' as geometry field).
+    TODO: NOTE: Taxi-specific input file should be changed.
 
 
     Returns
@@ -431,321 +809,6 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
             Number of times no path existed for initial solution and the second best solution lead to more found paths. In these cases the initial solution was replaced by the second best solution.
 
     '''
-
-    def getLocationResult(filepath_shp, DG, x, y, passenger, timestamp, previous_point, previous_intersected_line, previous_timestamp, previous_intersected_line_oneway, minNumberOfLines=2):
-        """Calculates all additional parameters for one GPS position (which corresponds to one line in the txt file).
-
-        Parameters
-        ----------
-        filepath_shp : str
-            The path where the shp file (which contains the street data) is stored.
-        DG : nx.DiGraph
-            Directed graph built from filepath_shp
-        y : float
-            Latitude of the GPS position in decimal degrees.
-        x : float
-            Longitude of the GPS position in decimal degrees.
-        passenger : {0, 1}
-            Occupancy shows if a cab has a fare (1 = occupied, 0 = free).
-        timestamp : int
-            Time is in UNIX epoch format.
-        previous_point : tuple of float
-            GPS position of the mapped previous point based on the underlying street structure.
-        previous_intersected_line : list of coordinates
-            The previous_intersected_line is a list of GPS coordinates. These coordinates represent the street on which the mapped previous point lies.
-        previous_timestamp : int
-            Time of the previous point (in UNIX epoch format).
-        previous_intersected_line_oneway : [list of coordinates
-            The 'oneway'-property of the previous_intersected_line. The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
-        minNumberOfLines : int, optional
-            The min number of lines is just needed to increse areasize. This means that the areasize is increased as long as minNumberOfLines is not found and max areasize is not exeeded.
-            A GPS position is only marked as an outlier if NOT EVEN A SINGLE STREET could be found in the area
-            By default 2.
-
-        Notes
-        -----
-        This function is only called in the following function: :func:`~gps2net.calculateMostLikelyPointAndPaths`
-
-        The additional parameters are calculated in this function. However, the solution is not saved. When the next GPS position is looked at, the result is validated and only if then it still found to be the most likely result is saved as such.
-        However, if then another result (namely, mapping the GPS position to another street which yields a result which lies further away from the GPS location) is found to be more likely, the initial result is overridden.
-
-        Returns
-        -------
-        location_result : dict
-            This dict contains the main solution. More specific, the additional attribute which will be written to the output file (after validation).
-        (closest_intersection_x, closest_intersection_y) : tuple of float
-            GPS position of the mapped point based on the underlying street structure.
-        previous_point : tuple of float
-            GPS position of the mapped previous point based on the underlying street structure.
-        intersected_line : list of coordinates
-            The intersected_line is a list of GPS coordinates. These coordinates represent the street on which the mapped point (closest_intersection_x, closest_intersection_y) lies.
-        previous_intersected_line : list of coordinates
-            The previous_intersected_line is a list of GPS coordinates. These coordinates represent the street on which the mapped previous point lies.
-        timestamp : int
-            Time is in UNIX epoch format.
-        intersected_line_oneway : {'B', 'F', 'T'}
-            The 'oneway'-property of the intersected_line. The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
-        previous_intersected_line_oneway : list of coordinates
-            The 'oneway'-property of the previous_intersected_line. The 'oneway'-property indicates if a street is bi-directional (B), or one way heading from the from-node to the to-node (F), or one way heading from the to-node to the from-node (T).
-        """
-
-        location_result = {}
-        # all the paths who were not changed from source-->target to target-->source have the following property
-        path_from_target_to_source = 0
-
-        closest_intersection_x = 0
-        closest_intersection_y = 0
-        intersected_line = None
-        intersected_line_oneway = None
-
-        # initiaize all keys (as some of them are not necessarily set, e.g. when previous point was an outlier)
-
-        location_result['solution_index'] = 0
-        location_result['target'] = previous_point
-        if (previous_intersected_line != None):
-            location_result['previous_intersected_line'] = previous_intersected_line
-        else:
-            location_result['previous_intersected_line'] = ''
-
-        if(previous_intersected_line_oneway != None):
-            location_result['previous_intersected_line_oneway'] = previous_intersected_line_oneway
-        else:
-            location_result['previous_intersected_line_oneway'] = ''
-
-        location_result['path_time'] = ''
-        location_result['path'] = ''
-        location_result['path_length'] = ''
-        location_result['air_line_length'] = ''
-        location_result['path_length/air_line_length'] = ''
-        location_result['velocity_m_s'] = ''
-        location_result['pathIDs'] = ''
-        location_result['comment'] = ''
-        location_result['path_from_target_to_source'] = ''
-        location_result['closest_intersection_x'] = ''
-        location_result['closest_intersection_y'] = ''
-        location_result['relative_position'] = ''
-        location_result['relative_position_normalized'] = ''
-        location_result['intersected_line'] = ''
-        location_result['intersected_line_oneway'] = ''
-        location_result['linestring_adjustment_visualization'] = ''
-
-        location_result['solution_id'] = ''
-        location_result['taxi_did_not_move'] = 0
-        location_result['second_best_solution_yields_more_found_paths'] = 0
-        location_result['NO_PATH_FOUND'] = 0
-        location_result['outlier'] = 0
-
-        comment = ''
-
-        location_result['x'] = x
-        location_result['y'] = y
-        location_result['source'] = (x, y)
-        location_result['passenger'] = passenger
-        location_result['timestamp'] = timestamp
-        location_result['previous_timestamp'] = previous_timestamp
-
-        # how to get the closest line from one point
-
-        gps_point = Point(x, y)  # radial sweep centre point
-
-        with fiona.open(filepath_shp) as street_lines:
-            # define size of area to filter streets. The areasize is measured in decimal degrees.
-            # an areasize of 0.001 is (in the area of San Francisco) approximately 88 meters for longitudes and approximately 111 meters for latitude. This means that if the areasize s 0.001, streets are searched in an area of approximately 196 (longitude) times 222 meters (latitute), since the aresize is added in all four directions of a GPS position. Or an even broader approximation:
-            # an areasize of 0.001 means that an area of approx. 200x200 meters is covered.
-            # an areasize of 0.0005 means that an area of approx. 50x50 meters is covered.
-            areasize = 0.0005
-            max_areasize = 0.001
-
-            # the min number of lines is just needed to increse areasize. This means that the areasize is increased as long as minNumberOfLines is not found and max areasize is not exeeded.
-            # a GPS position is only marked as an outlier if NOT EVEN A SINGLE STREET could be found in the area
-            number_of_streets = 0
-
-            while ((number_of_streets < minNumberOfLines) and (areasize < max_areasize)):
-
-                input_shapes = list(street_lines.items(
-                    bbox=((x-areasize), (y-areasize), (x+areasize), (y+areasize))))
-
-                number_of_streets = len(input_shapes)
-
-                # double are size so that if no lines are found, a bigger area is taken into account when filtering
-                areasize = areasize*1.25
-
-        # point is oulier only if not even a single street was found
-        if(number_of_streets == 0):
-            comment += 'This point is an outlier. '
-
-            # makes sure that next point doesn't calculate shortest path
-            previous_point = (0, 0)
-
-            # set the outlier property of the solution to 1
-            location_result['outlier'] = 1
-
-        # point is not an outlier
-        else:
-
-            solution_dict = {}
-
-            for input_line in input_shapes:
-
-                lineID = input_line[1]['id']
-
-                newLS = LineString(input_line[1]['geometry']['coordinates'])
-                # get the distance along the LineString to a point nearest to the point
-                relative_position = newLS.project(gps_point)
-                # get the distance normalized to the length of the LineString
-                relative_position_normalized = newLS.project(
-                    gps_point, normalized=True)
-
-                closest_point_on_line = newLS.interpolate(relative_position)
-
-                inter_dict_point = {}
-
-                inter_dict_point['closest_point_on_line'] = closest_point_on_line
-                inter_dict_point['relative_position_closest_point_on_line'] = relative_position
-                inter_dict_point['relative_position_normalized_closest_point_on_line'] = relative_position_normalized
-                inter_dict_point['input_line'] = newLS
-
-                #inter_dict_point['oneway'] = input_line[1]['properties']['oneway']
-
-                # distance needs to be float so that it can be sorted appropriately afterwards
-                inter_dict_point['distance'] = float(
-                    gps_point.distance(closest_point_on_line))
-
-                solution_dict[lineID] = inter_dict_point
-
-            # sort the nested dict by the 'distance' which lies within all the inner dicts
-            # the first element in the sorted dict is the point with the shortest distance to the gps_point
-            solution_dict_sorted_by_distance = sorted(
-                solution_dict.items(), key=lambda kv: (kv[1]['distance']))
-
-            # get the first element as it is the one with the smallest distance (which is the closest point)
-            solution_id = solution_dict_sorted_by_distance[0][0]
-            solution = solution_dict_sorted_by_distance[0][1]
-            location_result['all_solutions_sorted'] = solution_dict_sorted_by_distance
-            location_result['solution_id'] = solution_id
-            location_result['solution'] = solution
-
-            closest_intersection_x = solution['closest_point_on_line'].x
-            closest_intersection_y = solution['closest_point_on_line'].y
-            relative_position = solution['relative_position_closest_point_on_line']
-            relative_position_normalized = solution['relative_position_normalized_closest_point_on_line']
-
-            intersected_line = solution['input_line']
-            # TODO FIXME Fixing to "B"
-            intersected_line_oneway = "B"
-
-            # append x- and y-position of the mapped point, i.e. the closest point which lies on a street of the underlying network
-            location_result['closest_intersection_x'] = closest_intersection_x
-            location_result['closest_intersection_y'] = closest_intersection_y
-
-            # append the relative position / and the normalized relative position of the solution on the intersected line
-            location_result['relative_position'] = relative_position
-            location_result['relative_position_normalized'] = relative_position_normalized
-
-            # append the underlying map line on which the final point lies AND the oneway_property
-            location_result['intersected_line'] = intersected_line
-            location_result['intersected_line_oneway'] = intersected_line_oneway
-
-            # append the line which visualizes the way from the start point to the new position of the closest intersection point
-            linestring_adjustment_visualization = LineString(
-                [(gps_point.x, gps_point.y), (closest_intersection_x, closest_intersection_y)])
-
-            location_result['linestring_adjustment_visualization'] = linestring_adjustment_visualization
-
-            # check if previous point is set. if yes: calculate the shortest path from current point to previous point
-            if(previous_point == (0, 0)):
-                # no previous point set, do not calculate shortest path.
-                comment += 'Cannot compute shortest path as previous point is (0,0). '
-
-                # update statistics
-                statistics['cannot_compute_shortest_path_as_previous_point_is_outlier'] += 1
-
-            elif((closest_intersection_x, closest_intersection_y) == previous_point):
-                # if the taxi did not move, path is not created
-
-                comment += 'source==target --> Taxi did not move. '
-
-                location_result['path_length'] = 0
-                location_result['air_line_length'] = 0
-                location_result['path_length/air_line_length'] = 1
-                location_result['velocity_m_s'] = 0
-                location_result['taxi_did_not_move'] = 1
-
-                # update statistics
-                statistics['taxi_did_not_move'] += 1
-
-            else:
-
-                path_time = abs(previous_timestamp-timestamp)
-
-                location_result['path_time'] = path_time
-
-                path = None
-                path2 = None
-                # calculate the shortest path with A STAR algorithm
-                path, path_length, pathIDs = getShortestPathAStar(DG, (closest_intersection_x, closest_intersection_y), previous_point, list(
-                    intersected_line.coords), list(previous_intersected_line.coords), intersected_line_oneway, previous_intersected_line_oneway, filepath_shp)
-
-
-                # calculate air line distance between source and target
-                air_line_length = distFrom(
-                    closest_intersection_x, closest_intersection_y, previous_point[0], previous_point[1])
-
-                # if this is true, it is possible that a taxi has to ride all around the block because it is a oneway street and source and target lie on the same line
-                if(air_line_length < 20 and intersected_line_oneway != 'B' and previous_intersected_line_oneway != 'B' and (list(intersected_line.coords) == list(previous_intersected_line.coords))):
-
-                    # calculate where the source lies on the line
-                    d_source = LineString(list(intersected_line.coords)).project(
-                        Point(closest_intersection_x, closest_intersection_y))
-
-                    # calculate where the target lies on the line
-                    d_target = LineString(list(previous_intersected_line.coords)).project(
-                        Point(previous_point))
-
-                    # check if there was a glipse in the gps coordinates which resulted in a situation where the source lies after the target on a oneway street
-                    # if it is a oneway line from the FROM-node to the TO-node and source lies AFTER the target   OR   if it is a oneway line from the TO-node to the FROM-node and source lies BEFORE the target
-                    if((intersected_line_oneway == 'F' and d_source > d_target)or(intersected_line_oneway == 'T' and d_source < d_target)):
-
-                        # calculate the shortest path with A STAR algorithm
-                        # set ignore_oneway=True : this makes sure that the source_line and the target_line both are treated as lines where driving in both directions is allowed (so feature 'oneway' is ignored)
-                        path2, path_length2, pathIDs2 = getShortestPathAStar(DG, (closest_intersection_x, closest_intersection_y), previous_point, list(intersected_line.coords), list(
-                            previous_intersected_line.coords), intersected_line_oneway, previous_intersected_line_oneway, filepath_shp, ignore_oneway=True)
-
-                    # if the new solution is more likely to be correct, override path/path_lenght/pathIDs to make sure to use the new solution, i.e. the one which ignores the 'oneway' property
-                    if((path == None and path2 != None) or (path != None and path2 != None and (path_length > path_length2))):
-                        path = path2
-                        path_length = path_length2
-                        pathIDs = pathIDs2
-                        comment += 'The oneway-property was ignored. '
-                        path_from_target_to_source = 1
-
-                        # update statistics
-                        statistics['path_from_target_to_source'] += 1
-
-                # if a path was found, append the solution to the calculatedSolution
-                if(path != None):
-                    velocity_m_s = path_length/path_time
-
-                    location_result['path'] = LineString(path)
-                    location_result['path_length'] = path_length
-                    location_result['air_line_length'] = air_line_length
-                    location_result['path_length/air_line_length'] = path_length / \
-                        air_line_length
-                    location_result['velocity_m_s'] = velocity_m_s
-                    location_result['pathIDs'] = pathIDs
-                    location_result['comment'] = comment
-
-                else:
-
-                    # no previous point set, do not calculate shortest path.
-                    printComment = 'No path was found with A Star algorithm from {} to {}. '.format(
-                        (closest_intersection_x, closest_intersection_y), previous_point)
-
-        location_result['path_from_target_to_source'] = path_from_target_to_source
-        location_result['comment'] = comment
-
-        return location_result, (closest_intersection_x, closest_intersection_y), previous_point, intersected_line, previous_intersected_line, timestamp, intersected_line_oneway, previous_intersected_line_oneway
-
     counter = 0
 
     calculatedSolution = []
@@ -818,7 +881,10 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
 
                 # get the result for the current location
                 current_location_result, source, target, intersected_line, target_intersected_line, timestamp, intersected_line_oneway, target_intersected_line_oneway = getLocationResult(
-                    filepath_shp, DG, x, y, passenger, timestamp, previous_source, previous_intersected_line, previous_timestamp, previous_intersected_line_oneway, minNumberOfLines)
+                    filepath_shp, DG, x, y, passenger, timestamp,
+                    previous_source, previous_intersected_line,
+                    previous_timestamp, previous_intersected_line_oneway,
+                    statistics, minNumberOfLines)
             if (previous_location_result != {}):
 
                 # check if the result of the previous location can be improved
@@ -890,11 +956,22 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
                                 current_location_result_new, source_new, target_new, intersected_line_new, target_intersected_line_new, timestamp_new, intersected_line_oneway_new, target_intersected_line_oneway_new = getLocationResult(
                                     filepath_shp, DG, x, y, passenger, timestamp,
                                     (new_solution_point_x,
-                                     new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], 'B', minNumberOfLines)
+                                     new_solution_point_y),
+                                    new_solution['input_line'],
+                                    previous_location_result['timestamp'], 'B',
+                                    statistics, minNumberOfLines)
 
                                 # calculate the solution for the data point whe previously looked at with the new solution point.
                                 previous_location_result_new, previous_source_new, previous_target_new, previous_intersected_line_new, previous_target_intersected_line_new, previous_timestamp_new, previous_intersected_line_oneway_new, previous_target_intersected_line_oneway_new = getLocationResult(
-                                    filepath_shp, DG, new_solution_point_x, new_solution_point_y, previous_location_result['passenger'], previous_location_result['timestamp'], previous_location_result['target'], previous_location_result['previous_intersected_line'], previous_location_result['previous_timestamp'], previous_location_result['previous_intersected_line_oneway'], minNumberOfLines)
+                                    filepath_shp, DG, new_solution_point_x,
+                                    new_solution_point_y,
+                                    previous_location_result['passenger'],
+                                    previous_location_result['timestamp'],
+                                    previous_location_result['target'],
+                                    previous_location_result['previous_intersected_line'],
+                                    previous_location_result['previous_timestamp'],
+                                    previous_location_result['previous_intersected_line_oneway'],
+                                    statistics, minNumberOfLines)
 
                                 # check if with the new solution both paths (from new solution to previous and to next point) exist.
                                 if(previous_location_result_new['path_length'] != '' and current_location_result_new['path_length'] != ''):
@@ -989,11 +1066,23 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
                     # bidirectional
                     new_solution['oneway'] = 'B'
                     current_location_result_new, source_new, target_new, intersected_line_new, target_intersected_line_new, timestamp_new, intersected_line_oneway_new, target_intersected_line_oneway_new = getLocationResult(
-                        filepath_shp, DG, x, y, passenger, timestamp, (new_solution_point_x, new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], new_solution['oneway'], minNumberOfLines)
+                        filepath_shp, DG, x, y, passenger, timestamp,
+                        (new_solution_point_x, new_solution_point_y),
+                        new_solution['input_line'],
+                        previous_location_result['timestamp'],
+                        new_solution['oneway'], statistics, minNumberOfLines)
 
                     # calculte previous location result with new solution
                     previous_location_result_new, previous_source_new, previous_target_new, previous_intersected_line_new, previous_target_intersected_line_new, previous_timestamp_new, previous_intersected_line_oneway_new, previous_target_intersected_line_oneway_new = getLocationResult(
-                        filepath_shp, DG, new_solution_point_x, new_solution_point_y, previous_location_result['passenger'], previous_location_result['timestamp'], previous_location_result['target'], previous_location_result['previous_intersected_line'], previous_location_result['previous_timestamp'], previous_location_result['previous_intersected_line_oneway'], minNumberOfLines)
+                        filepath_shp, DG, new_solution_point_x,
+                        new_solution_point_y,
+                        previous_location_result['passenger'],
+                        previous_location_result['timestamp'],
+                        previous_location_result['target'],
+                        previous_location_result['previous_intersected_line'],
+                        previous_location_result['previous_timestamp'],
+                        previous_location_result['previous_intersected_line_oneway'],
+                        statistics, minNumberOfLines)
 
                     # check how many paths could not be found WITH NEW SOLUTION
                     not_found_paths_NEW_SOLUTION = 0
