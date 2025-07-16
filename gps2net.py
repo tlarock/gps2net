@@ -1805,13 +1805,47 @@ def caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_st
 
 
 def main():
+    import argparse
     import glob
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--shapefile",
+                        help="Path to shapefile of road network.",
+                        type=str,
+                        default="Data/taxi_san_francisco/San Francisco Basemap Street Centerlines/geo_export_e5dd0539-2344-4e87-b198-d50274be8e1d.shp"
+                        )
+    parser.add_argument("--input-dir",
+                        help="Path to location of input file(s).",
+                        type=str,
+                        default="Data/testData/"
+                        )
+    parser.add_argument("--input-filename",
+                        help="Name of input file located in input-dir. If \
+                        --filename-is-glob is also given, input-filename is \
+                        assumed to be a regex pattern passed to glob.glob.",
+                        type=str,
+                        default="testTaxi.txt"
+                        )
+    parser.add_argument("--filename-is-glob",
+                        help="If given, input-filename is assumed to be a regex \
+                        pattern that will be passed into glob.glob.",
+                        action="store_true"
+                        )
+    parser.add_argument("--output-dir",
+                        help="Base output directory. Default is ./output/",
+                        type=str,
+                        default="output_files"
+                        )
+
+    args = parser.parse_args()
+
     global number_of_txt_files
     global current_txt_file
 
     # TODO: To use this code, I need a shapefile of the road network
     #filepath_shp = 'Data/taxi_san_francisco/San Francisco Basemap Street Centerlines/geo_export_e5dd0539-2344-4e87-b198-d50274be8e1d.shp'
-    filepath_shp = 'Data/netmob-2025/road_network.shp'
+    #filepath_shp = 'Data/netmob-2025/road_network.shp'
+    filepath_shp = args.shapefile
 
     # TODO NOTE: Despite appearances, the shapefile graph is only constructed
     # once, but it is made a global variable (search for "global DG" to find
@@ -1819,8 +1853,17 @@ def main():
     # construct the graph once
 
 
-    input_filepath = "Data/netmob-2025/smoothed_trajectories_by_mode/PRIV_CAR_DRIVER/"
-    filepaths = glob.glob(f"{input_filepath}*.txt")
+    #input_filepath = "Data/netmob-2025/smoothed_trajectories_by_mode/PRIV_CAR_DRIVER/"
+    #filepaths = glob.glob(f"{input_filepath}*.txt")
+    input_dir = args.input_dir
+    input_filename = args.input_filename
+
+    if not args.filename_is_glob:
+        filepaths = [input_dir + "/" + input_filename]
+    else:
+        filepaths = glob.glob(input_dir + "/" + input_filename)
+
+    output_dir = args.output_dir
 
     #filepaths = []
     #filepaths.append("Data/testData/testTaxi.txt")
@@ -1838,7 +1881,7 @@ def main():
 
         new_filename = getFilename(path)
 
-        dirName = os.path.join('output_files', new_filename)
+        dirName = os.path.join(output_dir, new_filename)
 
         # Create target directory & all intermediate directories if don't exists
         try:
