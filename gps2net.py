@@ -808,32 +808,20 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
     calculatedSolution = []
 
     # initialize the dict in which all the statistics of the currently calculated solution will be stored.
-    statistics = {}
-    statistics['outlier'] = 0
-    statistics['taxi_did_not_move'] = 0
-    statistics['no_path_found'] = 0
-    statistics['cannot_compute_shortest_path_as_previous_point_is_outlier'] = 0
-    statistics['path_from_target_to_source'] = 0
-    statistics['checked_other_solution_index'] = 0
-    statistics['chose_other_solution_index'] = 0
-    statistics['solution_already_lies_on_shortest_path'] = 0
-    statistics['no_solution_lies_on_shortest_path'] = 0
-    statistics['other_solution_is_worse'] = 0
-    statistics['other_solution_no_path_found'] = 0
+    # TODO: This is obnoxious, maybe we can find a better way using a
+    # class/dataclass or just a dataframe or something else
+    stat_names = ['outlier', 'taxi_did_not_move', 'no_path_found',
+                  'cannot_compute_shortest_path_as_previous_point_is_outlier',
+                  'path_from_target_to_source', 'checked_other_solution_index',
+                  'chose_other_solution_index',
+                  'solution_already_lies_on_shortest_path',
+                  'no_solution_lies_on_shortest_path',
+                  'other_solution_is_worse',
+                  'other_solution_no_path_found',
+                  'checked_if_path_exists_for_second_best_solution_index',
+                  'second_best_solution_yields_more_found_paths']
 
-    statistics['checked_if_path_exists_for_second_best_solution_index'] = 0
-    statistics['second_best_solution_yields_more_found_paths'] = 0
-
-    # TODO: FIXME: I added target/source and all of the current_*
-
-    #target = (0, 0)
-    #source = (0, 0)
-    #intersected_line = None
-    #target_intersected_line = None
-    #target_intersected_line_oneway = None
-    #timestamp = None
-    #intersected_line_oneway = None
-
+    statistics = {stat: 0 for stat in stat_names}
 
     previous_target = (0, 0)
     previous_source = (0, 0)
@@ -853,8 +841,6 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
 
     previous_location_result = {}
 
-    # TODO FIXME
-    current_location_result = {}
     with open(filepath, 'r') as f:
         mylist = f.read().splitlines()
 
@@ -1288,6 +1274,7 @@ if __name__ == '__main__':
         new_filename_path_length_air_line_length = dirName / 'path_length_air_line_length_PLOT.png'
 
         # calculate and save the simple solution (path from exact gps positions without considering the underlying street network)
+        # TODO: This should be optional
         getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
 
         # calculate and save the full solution (most likely paths) based on the underlying street network
