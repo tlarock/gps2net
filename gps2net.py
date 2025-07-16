@@ -129,28 +129,28 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
 
             # add edges in both directions
-            temporarily_add_edge_to_graph(DG, edge_target_start, target, distFrom(
-                edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, target, edge_target_end, distFrom(
-                edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, edge_target_end, target, distFrom(
-                edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, target, edge_target_start, distFrom(
-                edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_target_start, target, air_line_distance(
+                edge_target_start, target), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, target, edge_target_end, air_line_distance(
+                edge_target_end, target), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_target_end, target, air_line_distance(
+                edge_target_end, target), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, target, edge_target_start, air_line_distance(
+                edge_target_start, target), graph_edge_id, graph_edge_oneway)
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(DG, edge_target_start, target, distFrom(
-                edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, target, edge_target_end, distFrom(
-                edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_target_start, target, air_line_distance(
+                edge_target_start, target), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, target, edge_target_end, air_line_distance(
+                edge_target_end, target), graph_edge_id, graph_edge_oneway)
 
         else:
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(DG, target, edge_target_start, distFrom(
-                edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, edge_target_end, target, distFrom(
-                edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, target, edge_target_start, air_line_distance(
+                edge_target_start, target), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_target_end, target, air_line_distance(
+                edge_target_end, target), graph_edge_id, graph_edge_oneway)
 
     else:
         # no need to add additional edges target
@@ -199,58 +199,58 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
 
             # add adges in both directions
             if(source_line_oneway == 'B' or ignore_oneway == True):
-                temporarily_add_edge_to_graph(DG, source, target, distFrom(
-                    source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-                temporarily_add_edge_to_graph(DG, target, source, distFrom(
-                    source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+                temporarily_add_edge_to_graph(DG, source, target,
+                                              air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
+                temporarily_add_edge_to_graph(DG, target, source,
+                                              air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
 
             # add adges in only one direction
             elif(source_line_oneway == 'F'):
                 # if the source_line (which equals target_line) is oneway from the from-node to the to-node, the point which is closer to the beginning of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
-                    temporarily_add_edge_to_graph(DG, target, source, distFrom(
-                        source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+                    temporarily_add_edge_to_graph(DG, target, source,
+                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
                 else:
-                    temporarily_add_edge_to_graph(DG, source, target, distFrom(
-                        source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+                    temporarily_add_edge_to_graph(DG, source, target,
+                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
 
             # add adges in only one direction
             elif(source_line_oneway == 'T'):
                 # if the source_line (which equals target_line) is oneway from the to-node to the from-node, the point which is closer to the end of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
-                    temporarily_add_edge_to_graph(DG, source, target, distFrom(
-                        source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+                    temporarily_add_edge_to_graph(DG, source, target,
+                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
                 else:
-                    temporarily_add_edge_to_graph(DG, target, source, distFrom(
-                        source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
+                    temporarily_add_edge_to_graph(DG, target, source,
+                                                  air_line_distance(source, target), graph_edge_id, graph_edge_oneway)
 
         # add the line segments for the source as edges to the graph
 
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(DG, edge_source_start, source, distFrom(
-                edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, source, edge_source_end, distFrom(
-                edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_source_start, source,
+                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, source, edge_source_end,
+                                          air_line_distance(edge_source_end, source), graph_edge_id, graph_edge_oneway)
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(DG, edge_source_end, source, distFrom(
-                edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, source, edge_source_start, distFrom(
-                edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_source_end, source,
+                                          air_line_distance(edge_source_end, source), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, source, edge_source_start,
+                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(DG, edge_source_start, source, distFrom(
-                edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, source, edge_source_end, distFrom(
-                edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_source_start, source,
+                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, source, edge_source_end,
+                                          air_line_distance(edge_source_end, source), graph_edge_id, graph_edge_oneway)
 
         else:
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(DG, edge_source_end, source, distFrom(
-                edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(DG, source, edge_source_start, distFrom(
-                edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, edge_source_end, source, air_line_distance(
+                edge_source_end, source), graph_edge_id, graph_edge_oneway)
+            temporarily_add_edge_to_graph(DG, source, edge_source_start,
+                                          air_line_distance(edge_source_start, source), graph_edge_id, graph_edge_oneway)
 
     try:
         # try to find a path
