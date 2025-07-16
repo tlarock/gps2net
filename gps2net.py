@@ -46,11 +46,6 @@ def temporarily_add_edge_to_graph(DG, startNode, endNode, edgeWeight, edgeId,
         DG.add_edge(startNode, endNode, weight=edgeWeight,
                     id=edgeId, oneway=direction)
         all_added_edges.append((startNode, endNode))
-    else:
-        # edge is already in graph
-        # print('graph does have({},{})'.format(startNode,endNode))
-        # print('edge:',DG.get_edge_data(startNode, endNode))
-        pass
 
 
 def getShortestPathAStar(DG, source, target, source_line, target_line, source_line_oneway, target_line_oneway, filepath_shp, ignore_oneway=False):
