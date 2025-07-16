@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # %%
+import traceback
 import doctest
 import math
 import os
@@ -15,7 +16,6 @@ from shapely.geometry import LineString, Point
 
 
 # global variable: empty Directed Graph
-DG = nx.DiGraph()
 current_txt_file = 0
 
 def blockPrint():
@@ -295,7 +295,7 @@ def air_line_distance(source, target):
     return distance
 
 
-def getShortestPathAStar(source, target, source_line, target_line, source_line_oneway, target_line_oneway, filepath_shp, ignore_oneway=False):
+def getShortestPathAStar(DG, source, target, source_line, target_line, source_line_oneway, target_line_oneway, filepath_shp, ignore_oneway=False):
     """Calculates the shortest – most likely – path between two GPS positions (on a street segment) based on the streets of the underlying network.
 
     Parameters
@@ -329,10 +329,7 @@ def getShortestPathAStar(source, target, source_line, target_line, source_line_o
         The path IDs of all street segments which are traversed on the path.
     """
 
-    # make sure global variable is used. 'DG' is a Directed Graph
-    global DG
-
-    def temporarily_add_edge_to_graph(startNode, endNode, edgeWeight, edgeId, direction):
+    def temporarily_add_edge_to_graph(DG, startNode, endNode, edgeWeight, edgeId, direction):
         '''Temporarily adds an edge to the global graph.
 
         Parameters
@@ -372,11 +369,7 @@ def getShortestPathAStar(source, target, source_line, target_line, source_line_o
     path_length = None
     path_IDs = []
     all_added_edges = []
-
-    # check if the global variable 'DG' is an empty directed graph. If yes, create a graph from the shp file content.
-    if(nx.is_empty(DG)):
-        DG = (createGraphFromSHPInput(filepath_shp))
-
+ 
     # check if target lies exactly on the beginning/end of a line segment
     # if yes, target already exists as a node in the graph
     if (target not in target_line):
@@ -414,27 +407,27 @@ def getShortestPathAStar(source, target, source_line, target_line, source_line_o
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
 
             # add edges in both directions
-            temporarily_add_edge_to_graph(edge_target_start, target, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_target_start, target, distFrom(
                 edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(target, edge_target_end, distFrom(
+            temporarily_add_edge_to_graph(DG, target, edge_target_end, distFrom(
                 edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(edge_target_end, target, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_target_end, target, distFrom(
                 edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(target, edge_target_start, distFrom(
+            temporarily_add_edge_to_graph(DG, target, edge_target_start, distFrom(
                 edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(edge_target_start, target, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_target_start, target, distFrom(
                 edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(target, edge_target_end, distFrom(
+            temporarily_add_edge_to_graph(DG, target, edge_target_end, distFrom(
                 edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
 
         else:
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(target, edge_target_start, distFrom(
+            temporarily_add_edge_to_graph(DG, target, edge_target_start, distFrom(
                 edge_target_start[0], edge_target_start[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(edge_target_end, target, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_target_end, target, distFrom(
                 edge_target_end[0], edge_target_end[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
 
     else:
@@ -484,57 +477,57 @@ def getShortestPathAStar(source, target, source_line, target_line, source_line_o
 
             # add adges in both directions
             if(source_line_oneway == 'B' or ignore_oneway == True):
-                temporarily_add_edge_to_graph(source, target, distFrom(
+                temporarily_add_edge_to_graph(DG, source, target, distFrom(
                     source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
-                temporarily_add_edge_to_graph(target, source, distFrom(
+                temporarily_add_edge_to_graph(DG, target, source, distFrom(
                     source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
 
             # add adges in only one direction
             elif(source_line_oneway == 'F'):
                 # if the source_line (which equals target_line) is oneway from the from-node to the to-node, the point which is closer to the beginning of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
-                    temporarily_add_edge_to_graph(target, source, distFrom(
+                    temporarily_add_edge_to_graph(DG, target, source, distFrom(
                         source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
                 else:
-                    temporarily_add_edge_to_graph(source, target, distFrom(
+                    temporarily_add_edge_to_graph(DG, source, target, distFrom(
                         source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
 
             # add adges in only one direction
             elif(source_line_oneway == 'T'):
                 # if the source_line (which equals target_line) is oneway from the to-node to the from-node, the point which is closer to the end of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
-                    temporarily_add_edge_to_graph(source, target, distFrom(
+                    temporarily_add_edge_to_graph(DG, source, target, distFrom(
                         source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
                 else:
-                    temporarily_add_edge_to_graph(target, source, distFrom(
+                    temporarily_add_edge_to_graph(DG, target, source, distFrom(
                         source[0], source[1], target[0], target[1]), graph_edge_id, graph_edge_oneway)
 
         # add the line segments for the source as edges to the graph
 
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(edge_source_start, source, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_source_start, source, distFrom(
                 edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(source, edge_source_end, distFrom(
+            temporarily_add_edge_to_graph(DG, source, edge_source_end, distFrom(
                 edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(edge_source_end, source, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_source_end, source, distFrom(
                 edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(source, edge_source_start, distFrom(
+            temporarily_add_edge_to_graph(DG, source, edge_source_start, distFrom(
                 edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(edge_source_start, source, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_source_start, source, distFrom(
                 edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(source, edge_source_end, distFrom(
+            temporarily_add_edge_to_graph(DG, source, edge_source_end, distFrom(
                 edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
 
         else:
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(edge_source_end, source, distFrom(
+            temporarily_add_edge_to_graph(DG, edge_source_end, source, distFrom(
                 edge_source_end[0], edge_source_end[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
-            temporarily_add_edge_to_graph(source, edge_source_start, distFrom(
+            temporarily_add_edge_to_graph(DG, source, edge_source_start, distFrom(
                 edge_source_start[0], edge_source_start[1], source[0], source[1]), graph_edge_id, graph_edge_oneway)
 
     try:
@@ -569,7 +562,7 @@ def getShortestPathAStar(source, target, source_line, target_line, source_line_o
     return path, path_length, path_IDs
 
 
-def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0):
+def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0):
     '''Maps GPS positions to the most likely points (based on the underlying street network) and obtains the most likely paths between those points based on the underlying street network.
 
     Parameters
@@ -717,13 +710,15 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files
 
     '''
 
-    def getLocationResult(filepath_shp, x, y, passenger, timestamp, previous_point, previous_intersected_line, previous_timestamp, previous_intersected_line_oneway, minNumberOfLines=2):
+    def getLocationResult(filepath_shp, DG, x, y, passenger, timestamp, previous_point, previous_intersected_line, previous_timestamp, previous_intersected_line_oneway, minNumberOfLines=2):
         """Calculates all additional parameters for one GPS position (which corresponds to one line in the txt file).
 
         Parameters
         ----------
         filepath_shp : str
             The path where the shp file (which contains the street data) is stored.
+        DG : nx.DiGraph
+            Directed graph built from filepath_shp
         y : float
             Latitude of the GPS position in decimal degrees.
         x : float
@@ -966,7 +961,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files
                 path = None
                 path2 = None
                 # calculate the shortest path with A STAR algorithm
-                path, path_length, pathIDs = getShortestPathAStar((closest_intersection_x, closest_intersection_y), previous_point, list(
+                path, path_length, pathIDs = getShortestPathAStar(DG, (closest_intersection_x, closest_intersection_y), previous_point, list(
                     intersected_line.coords), list(previous_intersected_line.coords), intersected_line_oneway, previous_intersected_line_oneway, filepath_shp)
 
 
@@ -991,7 +986,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files
 
                         # calculate the shortest path with A STAR algorithm
                         # set ignore_oneway=True : this makes sure that the source_line and the target_line both are treated as lines where driving in both directions is allowed (so feature 'oneway' is ignored)
-                        path2, path_length2, pathIDs2 = getShortestPathAStar((closest_intersection_x, closest_intersection_y), previous_point, list(intersected_line.coords), list(
+                        path2, path_length2, pathIDs2 = getShortestPathAStar(DG, (closest_intersection_x, closest_intersection_y), previous_point, list(intersected_line.coords), list(
                             previous_intersected_line.coords), intersected_line_oneway, previous_intersected_line_oneway, filepath_shp, ignore_oneway=True)
 
                     # if the new solution is more likely to be correct, override path/path_lenght/pathIDs to make sure to use the new solution, i.e. the one which ignores the 'oneway' property
@@ -1103,7 +1098,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files
 
                 # get the result for the current location
                 current_location_result, source, target, intersected_line, target_intersected_line, timestamp, intersected_line_oneway, target_intersected_line_oneway = getLocationResult(
-                    filepath_shp, x, y, passenger, timestamp, previous_source, previous_intersected_line, previous_timestamp, previous_intersected_line_oneway, minNumberOfLines)
+                    filepath_shp, DG, x, y, passenger, timestamp, previous_source, previous_intersected_line, previous_timestamp, previous_intersected_line_oneway, minNumberOfLines)
             if (previous_location_result != {}):
 
                 # check if the result of the previous location can be improved
@@ -1126,7 +1121,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files
                         # Let's calculate shortest path between current source and previous target
 
                         # first calculate shortest path between current source and previous target <-- this will be the baseline so to say; We are trying to improve this solution, namely we try to shorten this path.
-                        path_to_previous_target, path_length_to_previous_target, pathIDs_to_previous_target = getShortestPathAStar(source, previous_target, list(
+                        path_to_previous_target, path_length_to_previous_target, pathIDs_to_previous_target = getShortestPathAStar(DG, source, previous_target, list(
                             intersected_line.coords), list(previous_target_intersected_line.coords), intersected_line_oneway, previous_target_intersected_line_oneway, filepath_shp)
 
                         # check if the initial solution already lies on a street segment which is part of the hortest path between the points before and after
@@ -1173,13 +1168,13 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files
 
                                 # calculate the solution for the data point whe currently look at with the new solution point.
                                 current_location_result_new, source_new, target_new, intersected_line_new, target_intersected_line_new, timestamp_new, intersected_line_oneway_new, target_intersected_line_oneway_new = getLocationResult(
-                                    filepath_shp, x, y, passenger, timestamp,
+                                    filepath_shp, DG, x, y, passenger, timestamp,
                                     (new_solution_point_x,
                                      new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], 'B', minNumberOfLines)
 
                                 # calculate the solution for the data point whe previously looked at with the new solution point.
                                 previous_location_result_new, previous_source_new, previous_target_new, previous_intersected_line_new, previous_target_intersected_line_new, previous_timestamp_new, previous_intersected_line_oneway_new, previous_target_intersected_line_oneway_new = getLocationResult(
-                                    filepath_shp, new_solution_point_x, new_solution_point_y, previous_location_result['passenger'], previous_location_result['timestamp'], previous_location_result['target'], previous_location_result['previous_intersected_line'], previous_location_result['previous_timestamp'], previous_location_result['previous_intersected_line_oneway'], minNumberOfLines)
+                                    filepath_shp, DG, new_solution_point_x, new_solution_point_y, previous_location_result['passenger'], previous_location_result['timestamp'], previous_location_result['target'], previous_location_result['previous_intersected_line'], previous_location_result['previous_timestamp'], previous_location_result['previous_intersected_line_oneway'], minNumberOfLines)
 
                                 # check if with the new solution both paths (from new solution to previous and to next point) exist.
                                 if(previous_location_result_new['path_length'] != '' and current_location_result_new['path_length'] != ''):
@@ -1274,11 +1269,11 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, number_of_txt_files
                     # bidirectional
                     new_solution['oneway'] = 'B'
                     current_location_result_new, source_new, target_new, intersected_line_new, target_intersected_line_new, timestamp_new, intersected_line_oneway_new, target_intersected_line_oneway_new = getLocationResult(
-                        filepath_shp, x, y, passenger, timestamp, (new_solution_point_x, new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], new_solution['oneway'], minNumberOfLines)
+                        filepath_shp, DG, x, y, passenger, timestamp, (new_solution_point_x, new_solution_point_y), new_solution['input_line'], previous_location_result['timestamp'], new_solution['oneway'], minNumberOfLines)
 
                     # calculte previous location result with new solution
                     previous_location_result_new, previous_source_new, previous_target_new, previous_intersected_line_new, previous_target_intersected_line_new, previous_timestamp_new, previous_intersected_line_oneway_new, previous_target_intersected_line_oneway_new = getLocationResult(
-                        filepath_shp, new_solution_point_x, new_solution_point_y, previous_location_result['passenger'], previous_location_result['timestamp'], previous_location_result['target'], previous_location_result['previous_intersected_line'], previous_location_result['previous_timestamp'], previous_location_result['previous_intersected_line_oneway'], minNumberOfLines)
+                        filepath_shp, DG, new_solution_point_x, new_solution_point_y, previous_location_result['passenger'], previous_location_result['timestamp'], previous_location_result['target'], previous_location_result['previous_intersected_line'], previous_location_result['previous_timestamp'], previous_location_result['previous_intersected_line_oneway'], minNumberOfLines)
 
                     # check how many paths could not be found WITH NEW SOLUTION
                     not_found_paths_NEW_SOLUTION = 0
@@ -1648,7 +1643,7 @@ def getFilename(path):
     return filename
 
 
-def caculationForOneTXTFile(filepath_shp, new_filename_solution,
+def caculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
                             new_filename_statistics, new_filename_velocities,
                             new_filename_path_length_air_line_length, filepath,
                             number_of_txt_files):
@@ -1674,7 +1669,7 @@ def caculationForOneTXTFile(filepath_shp, new_filename_solution,
     header = ['latitude(y);longitude(x);hasPassenger;time;closest_intersection_x;closest_intersection_y;relative_position;relative_position_normalized;intersected_line_oneway;intersected_line_as_linestring;linestring_adjustment_visualization;path_time;path_as_linestring;path_length;air_line_length;path_length/air_line_length;velocity_m_s;pathIDs;solution_id;solution_index;path_from_target_to_source;taxi_did_not_move;second_best_solution_yields_more_found_paths;NO_PATH_FOUND;outlier;comment\n']
 
     myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
-        filepath, filepath_shp, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
+        filepath, filepath_shp, DG, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
 
     # this saves a new text file which includes the calculated parameters
     with open(new_filename_solution, 'w') as new_file:
@@ -1846,11 +1841,8 @@ def main():
     #filepath_shp = 'Data/netmob-2025/road_network.shp'
     filepath_shp = args.shapefile
 
-    # TODO NOTE: Despite appearances, the shapefile graph is only constructed
-    # once, but it is made a global variable (search for "global DG" to find
-    # the spot where it is defined). So if we run multiple files, we will only
-    # construct the graph once
-
+    # Create directed graph from shape file
+    DG = createGraphFromSHPInput(filepath_shp)
 
     #input_filepath = "Data/netmob-2025/smoothed_trajectories_by_mode/PRIV_CAR_DRIVER/"
     #filepaths = glob.glob(f"{input_filepath}*.txt")
@@ -1906,12 +1898,13 @@ def main():
 
         try:
             # calculate and save the full solution (most likely paths) based on the underlying street network
-            caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_statistics,
+            caculationForOneTXTFile(filepath_shp, DG, new_filename_solution, new_filename_statistics,
                                     new_filename_velocities,
                                     new_filename_path_length_air_line_length,
                                     path, number_of_txt_files)
         except Exception as e:
             print(e)
+            print(traceback.format_exc())
             continue
 
         # get all timestamp differences of a text file
