@@ -1083,8 +1083,9 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, minNumberOfLines=2,
         current_txt_file, number_of_txt_files)
 
     previous_location_result = {}
+
     # TODO FIXME
-    #current_location_result = {}
+    current_location_result = {}
     with open(filepath, 'r') as f:
         mylist = f.read().splitlines()
 
@@ -1818,7 +1819,7 @@ def main():
     # construct the graph once
 
 
-    input_filepath = "Data/netmob-2025/extracted_trajectories_by_mode/PRIV_CAR_DRIVER/"
+    input_filepath = "Data/netmob-2025/smoothed_trajectories_by_mode/PRIV_CAR_DRIVER/"
     filepaths = glob.glob(f"{input_filepath}*.txt")
 
     #filepaths = []
@@ -1861,9 +1862,13 @@ def main():
         # calculate and save the simple solution (path from exact gps positions without considering the underlying street network)
         getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
 
-        # calculate and save the full solution (most likely paths) based on the underlying street network
-        caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_statistics,
-                                new_filename_velocities, new_filename_path_length_air_line_length, path)
+        try:
+            # calculate and save the full solution (most likely paths) based on the underlying street network
+            caculationForOneTXTFile(filepath_shp, new_filename_solution, new_filename_statistics,
+                                    new_filename_velocities, new_filename_path_length_air_line_length, path)
+        except Exception as e:
+            print(e)
+            continue
 
         # get all timestamp differences of a text file
         timeDifferences = getTimeDifferences(path, 3)
