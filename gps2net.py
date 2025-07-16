@@ -15,9 +15,6 @@ import pandas as pd
 from shapely.geometry import LineString, Point
 
 
-# global variable: empty Directed Graph
-current_txt_file = 0
-
 def blockPrint():
     '''This method is used to disable print() messages.
     '''
@@ -562,7 +559,9 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
     return path, path_length, path_IDs
 
 
-def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0):
+def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
+                                     current_txt_file, number_of_txt_files,
+                                     minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0):
     '''Maps GPS positions to the most likely points (based on the underlying street network) and obtains the most likely paths between those points based on the underlying street network.
 
     Parameters
@@ -1023,8 +1022,6 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG, number_of_txt_f
         location_result['comment'] = comment
 
         return location_result, (closest_intersection_x, closest_intersection_y), previous_point, intersected_line, previous_intersected_line, timestamp, intersected_line_oneway, previous_intersected_line_oneway
-
-    global current_txt_file
 
     counter = 0
 
@@ -1646,7 +1643,7 @@ def getFilename(path):
 def caculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
                             new_filename_statistics, new_filename_velocities,
                             new_filename_path_length_air_line_length, filepath,
-                            number_of_txt_files):
+                            current_txt_file, number_of_txt_files):
     """Calculates the most likely solution for one entire txt file based on the underlying street network and saves the solution.
 
     Parameters
@@ -1669,7 +1666,7 @@ def caculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
     header = ['latitude(y);longitude(x);hasPassenger;time;closest_intersection_x;closest_intersection_y;relative_position;relative_position_normalized;intersected_line_oneway;intersected_line_as_linestring;linestring_adjustment_visualization;path_time;path_as_linestring;path_length;air_line_length;path_length/air_line_length;velocity_m_s;pathIDs;solution_id;solution_index;path_from_target_to_source;taxi_did_not_move;second_best_solution_yields_more_found_paths;NO_PATH_FOUND;outlier;comment\n']
 
     myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
-        filepath, filepath_shp, DG, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
+        filepath, filepath_shp, DG, current_txt_file, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
 
     # this saves a new text file which includes the calculated parameters
     with open(new_filename_solution, 'w') as new_file:
@@ -1834,8 +1831,6 @@ def main():
 
     args = parser.parse_args()
 
-    global current_txt_file
-
     # TODO: To use this code, I need a shapefile of the road network
     #filepath_shp = 'Data/taxi_san_francisco/San Francisco Basemap Street Centerlines/geo_export_e5dd0539-2344-4e87-b198-d50274be8e1d.shp'
     #filepath_shp = 'Data/netmob-2025/road_network.shp'
@@ -1862,7 +1857,7 @@ def main():
     #filepaths.append("Data/netmob-2025/extracted_trajectories_by_mode/PRIV_CAR_DRIVER/42_0034-thursday-44854-1.txt")
     #filepaths.append("Data/taxi_san_francisco/cabspottingdata/taxi1.txt")
     #filepaths.append("Data/taxi_san_francisco/cabspottingdata/taxi2.txt")
-
+    current_txt_file = 0
     number_of_txt_files = len(filepaths)
     print(f"Number of files identified: {number_of_txt_files}.")
     # loop through all the filepaths
@@ -1901,7 +1896,7 @@ def main():
             caculationForOneTXTFile(filepath_shp, DG, new_filename_solution, new_filename_statistics,
                                     new_filename_velocities,
                                     new_filename_path_length_air_line_length,
-                                    path, number_of_txt_files)
+                                    path, current_txt_file, number_of_txt_files)
         except Exception as e:
             print(e)
             print(traceback.format_exc())
