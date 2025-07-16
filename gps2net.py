@@ -159,8 +159,6 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
             d_target_same_line = LineString(source_line).project(Point(target))
             d_source_same_line = LineString(source_line).project(Point(source))
 
-            # get the edge (including the attributes)
-
             # add adges in both directions
             if(source_line_oneway == 'B' or ignore_oneway == True):
                 temporarily_add_edge_to_graph(DG, source, target,
@@ -211,7 +209,6 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
                                                   all_added_edges)
 
         # add the line segments for the source as edges to the graph
-
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
             # add edges in direction of from-node to to-node
             temporarily_add_edge_to_graph(DG, edge_source_start, source,
@@ -265,6 +262,7 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
         path = nx.astar_path(DG, source, target,
                              heuristic=air_line_distance, weight='weight')
 
+        # TODO: Can we not just compute the weighted length of path?
         path_length = nx.astar_path_length(
             DG, source, target, heuristic=air_line_distance, weight='weight')
 
