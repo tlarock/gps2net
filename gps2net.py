@@ -1250,103 +1250,38 @@ def getPathFromUnmappedGpsPositions(filepath, new_filename):
                 time_previous = time_current
 
 
-
-def calculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
-                            new_filename_statistics, new_filename_velocities,
-                            new_filename_path_length_air_line_length, filepath,
-                            current_txt_file, number_of_txt_files):
-    """Calculates the most likely solution for one entire txt file based on the underlying street network and saves the solution.
-
-    Parameters
-    ----------
-    filepath_shp : str
-        The path where the shp file (which contains the street data) is stored.
-    new_filename_solution : str
-        The filename of the new solution.
-    new_filename_statistics : str
-        The filename of the new solution.
-    new_filename_velocities : str
-        The filename of the velocities histogram.
-    new_filename_path_length_air_line_length : str
-        The filename of the path_length_air_line_length histogram.
-    filepath : str
-        The path where the txt file (which contains the taxi mobility trace) is stored.
+def write_solution_output(new_filename_solution, myCalculatedSolution):
+    """Writes solution to new_filename_solution
     """
-
     # set the header of the output txt file which will contain the calculated solution.
     header = ['latitude(y);longitude(x);hasPassenger;time;closest_intersection_x;closest_intersection_y;relative_position;relative_position_normalized;intersected_line_oneway;intersected_line_as_linestring;linestring_adjustment_visualization;path_time;path_as_linestring;path_length;air_line_length;path_length/air_line_length;velocity_m_s;pathIDs;solution_id;solution_index;path_from_target_to_source;taxi_did_not_move;second_best_solution_yields_more_found_paths;NO_PATH_FOUND;outlier;comment\n']
-
-    myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
-        filepath, filepath_shp, DG, current_txt_file, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
+    var_list = ["y", "x", "passenger", "timestamp",
+            "closest_intersection_x", "closest_intersection_y",
+            "relative_position", "relative_position_normalized",
+                        "intersected_line_oneway", "intersected_line",
+                        "linestring_adjustment_visualization", "path_time",
+                        "path", "path_length", "air_line_length",
+                        "path_length/air_line_length", "velocity_m_s",
+                        "pathIDs", "solution_id", "solution_index",
+                        "path_from_target_to_source", "taxi_did_not_move",
+                        "second_best_solution_yields_more_found_paths",
+                        "NO_PATH_FOUND", "outlier", "comment"]
 
     # this saves a new text file which includes the calculated parameters
     with open(new_filename_solution, 'w') as new_file:
         # write the header to the new txt file
         new_file.writelines(header)
-
         # write the calculated solution to the new txt file
         for location_result in myCalculatedSolution:
-            new_file.write(str(location_result['y']))
-            new_file.write(';')
-            new_file.write(str(location_result['x']))
-            new_file.write(';')
-            new_file.write(str(location_result['passenger']))
-            new_file.write(';')
-            new_file.write(str(location_result['timestamp']))
-            new_file.write(';')
-            new_file.write(str(location_result['closest_intersection_x']))
-            new_file.write(';')
-            new_file.write(str(location_result['closest_intersection_y']))
-            new_file.write(';')
-            new_file.write(str(location_result['relative_position']))
-            new_file.write(';')
-            new_file.write(
-                str(location_result['relative_position_normalized']))
-            new_file.write(';')
-            new_file.write(str(location_result['intersected_line_oneway']))
-            new_file.write(';')
-            new_file.write(str(location_result['intersected_line']))
-            new_file.write(';')
-            new_file.write(
-                str(location_result['linestring_adjustment_visualization']))
-            new_file.write(';')
-            new_file.write(str(location_result['path_time']))
-            new_file.write(';')
-            new_file.write(str(location_result['path']))
-            new_file.write(';')
-            new_file.write(str(location_result['path_length']))
-            new_file.write(';')
-            new_file.write(str(location_result['air_line_length']))
-            new_file.write(';')
-            new_file.write(
-                str(location_result['path_length/air_line_length']))
-            new_file.write(';')
-            new_file.write(str(location_result['velocity_m_s']))
-            new_file.write(';')
-            new_file.write(str(location_result['pathIDs']))
-            new_file.write(';')
-            new_file.write(str(location_result['solution_id']))
-            new_file.write(';')
-            new_file.write(str(location_result['solution_index']))
-            new_file.write(';')
-            new_file.write(
-                str(location_result['path_from_target_to_source']))
-            new_file.write(';')
-            new_file.write(str(location_result['taxi_did_not_move']))
-            new_file.write(';')
-            new_file.write(
-                str(location_result['second_best_solution_yields_more_found_paths']))
-            new_file.write(';')
-            new_file.write(str(location_result['NO_PATH_FOUND']))
-            new_file.write(';')
-            new_file.write(str(location_result['outlier']))
-            new_file.write(';')
-            new_file.write(str(location_result['comment']))
-            new_file.write('\n')
+            for idx, var in enumerate(var_list):
+                new_file.write(str(location_result[var]))
+                if idx < len(var_list)-1:
+                    new_file.write(";")
+                else:
+                    new_file.write("\n")
 
-    # initialise empty lists
+def generate_velocity_histogram(new_filename_velocities, myCalculatedSolution):
     velocities = []
-    path_length_air_line_length = []
     velocities_none_counter = 0
 
     # get all velocities of the solution
@@ -1356,20 +1291,39 @@ def calculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
         else:
             velocities.append(float(location_result['velocity_m_s']))
 
-        if (location_result['path_length/air_line_length'] != ''):
-            path_length_air_line_length.append(
-                float(location_result['path_length/air_line_length']))
-
     # plot the timeDifferences in a histogram
     plotAndSaveHistogram(velocities, 0, 80, 5, new_filename_velocities,
                          'Histogram of velocities between gps points', 'velocity in m/s')
+
+    # TODO: FIXME: This means we have to generate the plot to get this count.
+    # Consider whether we actually need to report this number in general, or if
+    # it should be up to the user to compute it themselves from the output.
+    return velocities_none_counter
+
+
+def generate_distances_histogram(new_filename_path_length_air_line_length, myCalculatedSolution):
+    # initialise empty lists
+    path_length_air_line_length = []
+
+    # get all velocities of the solution
+    for location_result in myCalculatedSolution:
+        if (location_result['path_length/air_line_length'] != ''):
+            path_length_air_line_length.append(
+                float(location_result['path_length/air_line_length']))
 
     # plot the the path_length/air_line_length in a histogram
     plotAndSaveHistogram(path_length_air_line_length, 1.0, 2.5, 0.1, new_filename_path_length_air_line_length,
                          'Histogram of path lengths divided by air line lengths', 'path length / air line length')
 
+def write_statistics(new_filename_statistics, filepath_shp, filepath,
+                     new_filename_solution, mySolutionStatistics,
+                     velocities_none_counter):
+    """Write statistics to file.
+    TODO: NOTE: This is an unstructured file that is somewhat useful for
+    humans, but would be better if it was structured into a CSV or similar to
+    be easily read into code.
+    """
     # SAVE STATISTICS IN NEW FILE
-
     with open(new_filename_statistics, 'w') as new_file:
         # write statistics to the file
         new_file.write('path of shp file: ')
@@ -1405,7 +1359,6 @@ def calculationForOneTXTFile(filepath_shp, DG, new_filename_solution,
             num_lines-velocities_none_counter, velocities_none_counter))
         new_file.write('\n')
         new_file.write('\n')
-
 
 def main():
     import argparse
@@ -1505,10 +1458,15 @@ def main():
         getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
 
         # calculate and save the full solution (most likely paths) based on the underlying street network
-        calculationForOneTXTFile(filepath_shp, DG, new_filename_solution, new_filename_statistics,
-                                new_filename_velocities,
-                                new_filename_path_length_air_line_length,
-                                path, current_txt_file, number_of_txt_files)
+        myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
+        path, filepath_shp, DG, current_txt_file, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
+
+        write_solution_output(new_filename_solution, myCalculatedSolution)
+        velocities_none_counter = generate_velocity_histogram(new_filename_velocities, myCalculatedSolution)
+        generate_distances_histogram(new_filename_path_length_air_line_length, myCalculatedSolution)
+        write_statistics(new_filename_statistics, filepath_shp, path,
+                     new_filename_solution, mySolutionStatistics,
+                     velocities_none_counter)
 
         # get all timestamp differences of a text file
         timeDifferences = getTimeDifferences(path, 3)
