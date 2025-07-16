@@ -86,41 +86,28 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
     all_added_edges = []
 
     # check if target lies exactly on the beginning/end of a line segment
-    # if yes, target already exists as a node in the graph
+    # if yes, target already exists as a node in the graph and we don't need to
+    # do anything further.
+    # If no, we need to define a node to use as the target.
     if (target not in target_line):
-
-        # add the line_segments as edges
-
-        d_target = LineString(target_line).project(Point(target))
-
-        cut_line_target = cut(LineString(target_line), d_target, Point(target))
-        new_line_target_after_cut = [list(x.coords) for x in cut_line_target]
-
-        len_line_segment = len(new_line_target_after_cut[0])
-        edge_target_start = new_line_target_after_cut[0][len_line_segment-2]
-        edge_target_end = new_line_target_after_cut[1][1]
+        edge_target_start, edge_target_end = get_tmp_edges(target_line, target)
 
         # get the edge (including the attributes)
-        # TODO: FIXME: All of these conditionals do the same thing???
-        if(target_line_oneway == 'B'):
-            graph_edge = DG.get_edge_data(
+        # TODO: FIXME: Previously, there was an else-if block here that
+        # conditioned on the value of oneway. However, the outcome was the same
+        # no matter what the value of oneway was, unless it was not set, in
+        # which case graph_edge was left undefined. It is not yet clear whether
+        # that specific behavior was somehow important, but generally as long
+        # as oneway was set to one of the 3 values, the following line would
+        # run in any case.
+        graph_edge = DG.get_edge_data(
                 edge_target_start, edge_target_end)
-
-        elif(target_line_oneway == 'F'):
-            graph_edge = DG.get_edge_data(
-                edge_target_start, edge_target_end)
-
-        elif(target_line_oneway == 'T'):
-            graph_edge = DG.get_edge_data(
-                edge_target_end, edge_target_start)
 
         graph_edge_id = graph_edge['id']
         graph_edge_oneway = graph_edge['oneway']
 
         # add the line segments for the target as edges to the graph
-
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
-
             # add edges in both directions
             temporarily_add_edge_to_graph(DG, edge_target_start, target, air_line_distance(
                 edge_target_start, target), graph_edge_id, graph_edge_oneway,
@@ -153,37 +140,13 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
                 edge_target_end, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
 
-    else:
-        # no need to add additional edges target
-        pass
-
     # check if source lies exactly on the beginning/end of a line segment
     # if yes, source already exists as a node
     if (source not in source_line):
-        # add the line_segments as edges
+        edge_source_start, edge_source_end = get_tmp_edges(source_line, source)
 
-        # if source and target line are equal, the already cut line has to be used
-
-        d_source = LineString(source_line).project(Point(source))
-        cut_line_source = cut(LineString(source_line), d_source, Point(source))
-        new_line_source_after_cut = [list(x.coords) for x in cut_line_source]
-
-        len_line_segment = len(new_line_source_after_cut[0])
-        edge_source_start = new_line_source_after_cut[0][len_line_segment-2]
-        edge_source_end = new_line_source_after_cut[1][1]
-
-        # get the edge (including the attributes)
-
-        if(source_line_oneway == 'B'):
-            graph_edge = DG.get_edge_data(
-                edge_source_start, edge_source_end)
-
-        elif(source_line_oneway == 'F'):
-            graph_edge = DG.get_edge_data(
-                edge_source_start, edge_source_end)
-
-        elif(source_line_oneway == 'T'):
-            graph_edge = DG.get_edge_data(
+        # TODO: Used to be a conditional on oneway here. See above.
+        graph_edge = DG.get_edge_data(
                 edge_source_end, edge_source_start)
 
         graph_edge_id = graph_edge['id']
@@ -865,6 +828,7 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
                     previous_source, previous_intersected_line,
                     previous_timestamp, previous_intersected_line_oneway,
                     statistics, minNumberOfLines)
+
             if (previous_location_result != {}):
 
                 # check if the result of the previous location can be improved
@@ -1215,6 +1179,10 @@ if __name__ == '__main__':
     args = parse_args()
 
     # Get the shapefile name
+    # TODO: As of now, shapefile is expected to have "oneway" property, but not
+    # all shapefiles will have it. So it is being set to "B" for bidirectional.
+    # Users should be warned if their file does not have all required data and
+    # be able to specify behavior in such cases.
     filepath_shp = pl.Path(args.shapefile)
     if not filepath_shp.exists():
         print(f"No shapefile found at {filepath_shp}. Exiting.")

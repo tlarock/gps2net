@@ -108,6 +108,32 @@ def distFrom(lng1, lat1, lng2, lat2):
 
     return dist
 
+def get_tmp_edges(line, point):
+    # Convert to Shapely objects
+    ls = LineString(line)
+    pt = Point(point)
+
+    # Get the distance between the point and the closest point on line
+    dist = ls.project(pt)
+
+    # TODO: This is nearly incomprehensible without an explanation
+    # First, we cut the line in 2, where the first segment goes from the
+    # beginning of target_ls to d_target, then the second goes from
+    # d_target to target_pt
+    cut_line = cut(ls, dist, pt)
+    # Now for each of our (presumably 2) line segments, we get a list of
+    # the coordinates of the points on the segment
+    cut_line_lst = [list(x.coords) for x in cut_line]
+    # We then look at the first segment. The final point in this segment is
+    # target_pt, so the one before that is the closest point that is part
+    # of the actual linestring (I think??)
+    len_line_segment = len(cut_line_lst[0])
+    edge_start = cut_line_lst[0][len_line_segment-2]
+    # Finally, the second point in the second line segment is the other end
+    # of an edge
+    edge_end = cut_line_lst[1][1]
+
+    return edge_start, edge_end
 
 def cut(line, distance, point):
     '''Cuts a line in two at a distance from its starting point.
@@ -130,8 +156,9 @@ def cut(line, distance, point):
     list with LineStrings
         Two LineStrings are returned. 'point' is the end point of the first LineString and the start point of the second LineString.
     '''
-
     # check if point lies on line. If not, return uncut line.
+    # TODO: Should we not tell the user this is happening? What does it mean
+    # for the code that uses this function when we return just one line instead of 2?
     if distance <= 0.0 or distance >= line.length:
         return [LineString(line)]
     coords = list(line.coords)
@@ -140,17 +167,17 @@ def cut(line, distance, point):
     for i, p in enumerate(coords):
         # i is the index
         # p is the point on the line
-        # pd is the distance of point p on the line
-        pd = line.project(Point(p))
-        # pd==distance means that point where the line should be cut is already a point on the line at index i (= so this means that there is a linesegment in the line which has the point as a starting or end point)
-        if (pd == distance):
+        # pdist is the distance of point p on the line
+        pdist = line.project(Point(p))
+        # pdist==distance means that point where the line should be cut is already a point on the line at index i (= so this means that there is a linesegment in the line which has the point as a starting or end point)
+        if (pdist == distance):
             # return two lines (whithout cutting any line segment)
             return [
                 LineString(coords[:i+1]),
                 LineString(coords[i:])]
-        # pd>distance means that a line segment of the line has to be cut
-        # If the line is a circle (start of the line equals the end of the line) and the line has to be cut in the last line segment 'pd>distance' is not enough as pd=0.0 for the end point.
-        if (pd > distance or (i != 0 and pd == 0.0 and coords[0] == coords[len(coords)-1])):
+        # pdist>distance means that a line segment of the line has to be cut
+        # If the line is a circle (start of the line equals the end of the line) and the line has to be cut in the last line segment 'pdist>distance' is not enough as pdist=0.0 for the end point.
+        if (pdist > distance or (i != 0 and pdist == 0.0 and coords[0] == coords[len(coords)-1])):
             # return the cut line
             return [
                 LineString(coords[:i] + [(point.x, point.y)]),
@@ -237,7 +264,7 @@ def createGraphFromSHPInput(filepath_shp):
 
                 previous_segment = segment
 
-            # Update Progress Bar
+            # Increment Progress Bar
             suffix = '| SHP file street segments: {}/{}'.format(
                 counter+1, nr_elements_in_SHP_file)
             printProgressBar(counter + 1, nr_elements_in_SHP_file,
