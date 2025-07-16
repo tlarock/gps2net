@@ -109,6 +109,10 @@ def distFrom(lng1, lat1, lng2, lat2):
     return dist
 
 def get_tmp_edges(line, point):
+    """Accepts a line and a point that falls on/near that line, then computes
+    start and end edges for the point.
+    TODO: Update docstring
+    """
     # Convert to Shapely objects
     ls = LineString(line)
     pt = Point(point)
@@ -116,7 +120,6 @@ def get_tmp_edges(line, point):
     # Get the distance between the point and the closest point on line
     dist = ls.project(pt)
 
-    # TODO: This is nearly incomprehensible without an explanation
     # First, we cut the line in 2, where the first segment goes from the
     # beginning of target_ls to d_target, then the second goes from
     # d_target to target_pt
