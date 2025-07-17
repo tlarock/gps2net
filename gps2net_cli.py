@@ -57,62 +57,69 @@ def parse_args():
 
 def process_file(filepath_shp, DG, output_dir, path,
                  run_unmapped=False, generate_plots=False, verbose=False):
-    new_filename = path.stem
+    # TODO: FIXME: Only wrapping in try/except to avoid whole process exiting, should not do in general
+    try:
+        new_filename = path.stem
 
-    dirName = output_dir / new_filename
+        dirName = output_dir / new_filename
 
-    # Create target directory & all intermediate directories if don't exists
-    dirName.mkdir(parents=True, exist_ok=True)
-    new_filename_simple_solution = dirName / 'pathFromUnmappedGpsPositions.txt'
+        # Create target directory & all intermediate directories if don't exists
+        dirName.mkdir(parents=True, exist_ok=True)
+        new_filename_simple_solution = dirName / 'pathFromUnmappedGpsPositions.txt'
 
-    new_filename_solution = dirName / 'calculatedSolution.txt'
-    new_filename_statistics = dirName / 'statistics.txt'
-    new_filename_velocities = dirName / 'velocitiesPLOT.png'
-    new_filename_path_length_air_line_length = dirName / 'path_length_air_line_length_PLOT.png'
+        new_filename_solution = dirName / 'calculatedSolution.txt'
+        new_filename_statistics = dirName / 'statistics.txt'
+        new_filename_velocities = dirName / 'velocitiesPLOT.png'
+        new_filename_path_length_air_line_length = dirName / 'path_length_air_line_length_PLOT.png'
 
-    if run_unmapped:
-        # calculate and save the simple solution (path from exact gps positions without considering the underlying street network)
-        getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
+        if run_unmapped:
+            # calculate and save the simple solution (path from exact gps positions without considering the underlying street network)
+            getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
 
-    # calculate and save the full solution (most likely paths) based on the underlying street network
-    myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
-    path, filepath_shp, DG, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0,
-    progress_bar=verbose)
+        # calculate and save the full solution (most likely paths) based on the underlying street network
+        myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
+        path, filepath_shp, DG, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0,
+        progress_bar=verbose)
 
-    # Write the results
-    write_solution_output(new_filename_solution, myCalculatedSolution)
-    velocities_none_counter = generate_velocity_histogram(new_filename_velocities, myCalculatedSolution,
-                                make_plot=generate_plots)
+        # Write the results
+        write_solution_output(new_filename_solution, myCalculatedSolution)
+        velocities_none_counter = generate_velocity_histogram(new_filename_velocities, myCalculatedSolution,
+                                    make_plot=generate_plots)
 
-    write_statistics(new_filename_statistics, filepath_shp, path,
-                 new_filename_solution, mySolutionStatistics,
-                 velocities_none_counter)
+        write_statistics(new_filename_statistics, filepath_shp, path,
+                     new_filename_solution, mySolutionStatistics,
+                     velocities_none_counter)
 
-    if generate_plots:
-        generate_distances_histogram(new_filename_path_length_air_line_length, myCalculatedSolution)
-        # get all timestamp differences of a text file
-        timeDifferences = getTimeDifferences(path, 3)
+        if generate_plots:
+            generate_distances_histogram(new_filename_path_length_air_line_length, myCalculatedSolution)
+            # get all timestamp differences of a text file
+            timeDifferences = getTimeDifferences(path, 3)
 
-        timedifferencesFileName = dirName / 'timedifferencesPLOT.png'
+            timedifferencesFileName = dirName / 'timedifferencesPLOT.png'
 
-        # plot the timeDifferences in a histogram
-        plotAndSaveHistogram(timeDifferences, 0, 300, 25, timedifferencesFileName,
-                             'Histogram of time differences between gps points', 'time difference in seconds')
+            # plot the timeDifferences in a histogram
+            plotAndSaveHistogram(timeDifferences, 0, 300, 25, timedifferencesFileName,
+                                 'Histogram of time differences between gps points', 'time difference in seconds')
 
-    # Convert to geometry file
-    df_traj = pd.read_csv(new_filename_solution, sep=";")
-    linestring_output_file = dirName / 'calculatedSolution_notna.csv'
-    df_traj["path_as_linestring"][df_traj["path_as_linestring"].notna()].to_csv(linestring_output_file, header=False, index=False)
+        # Convert to geometry file
+        df_traj = pd.read_csv(new_filename_solution, sep=";")
+        linestring_output_file = dirName / 'calculatedSolution_notna.csv'
+        df_traj["path_as_linestring"][df_traj["path_as_linestring"].notna()].to_csv(linestring_output_file, header=False, index=False)
 
-    if verbose:
-        print('')
-        print('The following files were created:')
-        print('- ' + new_filename_simple_solution.as_posix())
-        print('- ' + new_filename_solution.as_posix())
-        print('- ' + linestring_output_file.as_posix())
-        print('- ' + new_filename_statistics.as_posix())
-        print('- ' + new_filename_velocities.as_posix())
-        print('- ' + new_filename_path_length_air_line_length.as_posix())
+        if verbose:
+            print('')
+            print('The following files were created:')
+            print('- ' + new_filename_simple_solution.as_posix())
+            print('- ' + new_filename_solution.as_posix())
+            print('- ' + linestring_output_file.as_posix())
+            print('- ' + new_filename_statistics.as_posix())
+            print('- ' + new_filename_velocities.as_posix())
+            print('- ' + new_filename_path_length_air_line_length.as_posix())
+
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+
 
 if __name__ == '__main__':
     # parse arguments
@@ -173,6 +180,5 @@ if __name__ == '__main__':
         with mp.Pool(args.nprocs) as pool:
             part = partial(process_file, filepath_shp, DG, output_dir,
                            verbose=args.verbose, generate_plots=args.generate_plots)
-            [r for r in tqdm(
-                list(pool.imap_unordered(part, filepaths)),
-                total=len(filepaths), disable=not args.progress_bar)]
+            for _ in tqdm(pool.imap_unordered(part, filepaths), total=len(filepaths), disable=not args.progress_bar):
+                pass
