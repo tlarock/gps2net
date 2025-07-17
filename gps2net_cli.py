@@ -1,3 +1,7 @@
+import multiprocessing as mp
+from functools import partial
+from tqdm import tqdm
+
 from gps2net import *
 
 def parse_args():
@@ -30,17 +34,88 @@ def parse_args():
                         type=str,
                         default="output_files"
                         )
+    parser.add_argument("--nprocs",
+                        help="Number of processors for the multiprocessing \
+                        Pool. Default is 1.",
+                        type=int,
+                        default=1)
+    parser.add_argument("--generate-plots",
+                        help="If given, generate histograms of velocities, \
+                                time differences, and path lengths divided by \
+                                air line lengths.",
+                        action="store_true")
+    parser.add_argument("--verbose",
+                        help="If given, print more messages.",
+                        action="store_true")
+    parser.add_argument("--progress-bar",
+                        help="If given, print a progress bar.",
+                        action="store_true")
 
     args = parser.parse_args()
 
     return args
 
-if __name__ == '__main__':
-    import doctest
-    # running 'doctest.testmod()' test the examples in docstrings. Alternatively, the examples in docstrings can be tested by commenting out 'main()' and then navigating to the 'docs' directory and running the following command in the terminal (this will also show the test results for passed tests): python gps2net.py -v
-    testResults = doctest.testmod()
-    print(testResults)
+def process_file(filepath_shp, DG, output_dir, path,
+                 run_unmapped=False, generate_plots=False, verbose=False):
+    new_filename = path.stem
 
+    dirName = output_dir / new_filename
+
+    # Create target directory & all intermediate directories if don't exists
+    dirName.mkdir(parents=True, exist_ok=True)
+    new_filename_simple_solution = dirName / 'pathFromUnmappedGpsPositions.txt'
+
+    new_filename_solution = dirName / 'calculatedSolution.txt'
+    new_filename_statistics = dirName / 'statistics.txt'
+    new_filename_velocities = dirName / 'velocitiesPLOT.png'
+    new_filename_path_length_air_line_length = dirName / 'path_length_air_line_length_PLOT.png'
+
+    if run_unmapped:
+        # calculate and save the simple solution (path from exact gps positions without considering the underlying street network)
+        getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
+
+    # calculate and save the full solution (most likely paths) based on the underlying street network
+    myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
+    path, filepath_shp, DG, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0,
+    progress_bar=verbose)
+
+    # Write the results
+    write_solution_output(new_filename_solution, myCalculatedSolution)
+    velocities_none_counter = generate_velocity_histogram(new_filename_velocities, myCalculatedSolution,
+                                make_plot=generate_plots)
+
+    write_statistics(new_filename_statistics, filepath_shp, path,
+                 new_filename_solution, mySolutionStatistics,
+                 velocities_none_counter)
+
+    if generate_plots:
+        generate_distances_histogram(new_filename_path_length_air_line_length, myCalculatedSolution)
+        # get all timestamp differences of a text file
+        timeDifferences = getTimeDifferences(path, 3)
+
+        timedifferencesFileName = dirName / 'timedifferencesPLOT.png'
+
+        # plot the timeDifferences in a histogram
+        plotAndSaveHistogram(timeDifferences, 0, 300, 25, timedifferencesFileName,
+                             'Histogram of time differences between gps points', 'time difference in seconds')
+
+    # Convert to geometry file
+    df_traj = pd.read_csv(new_filename_solution, sep=";")
+    linestring_output_file = dirName / 'calculatedSolution_notna.csv'
+    df_traj["path_as_linestring"][df_traj["path_as_linestring"].notna()].to_csv(linestring_output_file, header=False, index=False)
+
+    if verbose:
+        print('')
+        print('The following files were created:')
+        print('- ' + new_filename_simple_solution.as_posix())
+        print('- ' + new_filename_solution.as_posix())
+        print('- ' + linestring_output_file.as_posix())
+        print('- ' + new_filename_statistics.as_posix())
+        print('- ' + new_filename_velocities.as_posix())
+        print('- ' + new_filename_path_length_air_line_length.as_posix())
+
+if __name__ == '__main__':
+    # parse arguments
     args = parse_args()
 
     # Get the shapefile name
@@ -54,14 +129,15 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Create directed graph from shape file
-    DG = createGraphFromSHPInput(filepath_shp)
+    DG = createGraphFromSHPInput(filepath_shp,
+                                 progress_bar=args.progress_bar,
+                                 verbose=args.verbose)
 
     # Get the directory and name of the input GPS coordinate files
     input_dir = pl.Path(args.input_dir)
     if not input_dir.exists() or not input_dir.is_dir():
         print(f"Directory {input_dir} does not exist or is not a directory. Exiting.")
         sys.exit(1)
-
 
     if not args.filename_is_glob:
         input_filename = pl.Path(args.input_filename)
@@ -84,63 +160,19 @@ if __name__ == '__main__':
     output_dir = pl.Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    current_txt_file = 0
     number_of_txt_files = len(filepaths)
     print(f"Number of files identified: {number_of_txt_files}.")
 
-    # loop through all the filepaths
-    for path in filepaths:
-
-        current_txt_file += 1
-
-        new_filename = path.stem
-
-        dirName = output_dir / new_filename
-
-        # Create target directory & all intermediate directories if don't exists
-        dirName.mkdir(parents=True, exist_ok=True)
-        new_filename_simple_solution = dirName / 'pathFromUnmappedGpsPositions.txt'
-
-        new_filename_solution = dirName / 'calculatedSolution.txt'
-        new_filename_statistics = dirName / 'statistics.txt'
-        new_filename_velocities = dirName / 'velocitiesPLOT.png'
-        new_filename_path_length_air_line_length = dirName / 'path_length_air_line_length_PLOT.png'
-
-        # calculate and save the simple solution (path from exact gps positions without considering the underlying street network)
-        # TODO: This should be optional
-        getPathFromUnmappedGpsPositions(path, new_filename_simple_solution)
-
-        # calculate and save the full solution (most likely paths) based on the underlying street network
-        myCalculatedSolution, mySolutionStatistics = calculateMostLikelyPointAndPaths(
-        path, filepath_shp, DG, current_txt_file, number_of_txt_files, minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0)
-
-        # Write the results
-        write_solution_output(new_filename_solution, myCalculatedSolution)
-        velocities_none_counter = generate_velocity_histogram(new_filename_velocities, myCalculatedSolution)
-        generate_distances_histogram(new_filename_path_length_air_line_length, myCalculatedSolution)
-        write_statistics(new_filename_statistics, filepath_shp, path,
-                     new_filename_solution, mySolutionStatistics,
-                     velocities_none_counter)
-
-        # get all timestamp differences of a text file
-        timeDifferences = getTimeDifferences(path, 3)
-
-        timedifferencesFileName = dirName / 'timedifferencesPLOT.png'
-
-        # plot the timeDifferences in a histogram
-        plotAndSaveHistogram(timeDifferences, 0, 300, 25, timedifferencesFileName,
-                             'Histogram of time differences between gps points', 'time difference in seconds')
-
-        # Convert to geometry file
-        df_traj = pd.read_csv(new_filename_solution, sep=";")
-        linestring_output_file = dirName / 'calculatedSolution_notna.csv'
-        df_traj["path_as_linestring"][df_traj["path_as_linestring"].notna()].to_csv(linestring_output_file, header=False, index=False)
-
-        print('')
-        print('The following files were created:')
-        print('- ' + new_filename_simple_solution.as_posix())
-        print('- ' + new_filename_solution.as_posix())
-        print('- ' + linestring_output_file.as_posix())
-        print('- ' + new_filename_statistics.as_posix())
-        print('- ' + new_filename_velocities.as_posix())
-        print('- ' + new_filename_path_length_air_line_length.as_posix())
+    # loop through all the filepaths, either serially or in parallel
+    if args.nprocs < 2:
+        for path in tqdm(filepaths, disable=not args.progress_bar):
+            process_file(filepath_shp, DG, output_dir, path,
+                         verbose=args.verbose,
+                         generate_plots=args.generate_plots)
+    else:
+        with mp.Pool(args.nprocs) as pool:
+            part = partial(process_file, filepath_shp, DG, output_dir,
+                           verbose=args.verbose, generate_plots=args.generate_plots)
+            [r for r in tqdm(
+                list(pool.imap_unordered(part, filepaths)),
+                total=len(filepaths), disable=not args.progress_bar)]

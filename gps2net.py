@@ -13,7 +13,6 @@ from shapely.geometry import LineString, Point
 
 from utils import *
 
-
 def temporarily_add_edge_to_graph(DG, startNode, endNode, edgeWeight, edgeId,
                                   direction, all_added_edges):
     '''Temporarily adds an edge to the graph.
@@ -609,8 +608,8 @@ def getLocationResult(filepath_shp, DG, x, y, passenger, timestamp,
 
 
 def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
-                                     current_txt_file, number_of_txt_files,
-                                     minNumberOfLines=2, criticalVelocity=35.0, criticalPathLength=2.0):
+                                     minNumberOfLines=2, criticalVelocity=35.0,
+                                     criticalPathLength=2.0, progress_bar=True):
     '''Maps GPS positions to the most likely points (based on the underlying street network) and obtains the most likely paths between those points based on the underlying street network.
 
     Parameters
@@ -794,11 +793,6 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
     lines_in_textfile = 0
     with open(filepath, 'r') as f:
         lines_in_textfile = sum(1 for line in f)
-
-    # Initial call to print 0% progress ProgressBar
-    suffix = '| current file: {}/{} lines'.format(counter+1, lines_in_textfile)
-    suffix += ' | total: {} of {} files'.format(
-        current_txt_file, number_of_txt_files)
 
     previous_location_result = {}
 
@@ -1121,14 +1115,5 @@ def calculateMostLikelyPointAndPaths(filepath, filepath_shp, DG,
             if (counter > 50):
                 # break
                 pass
-
-            # Update Progress Bar
-            if(txt_line != 'artificialline'):
-                suffix = '| current file: {}/{} lines'.format(
-                    counter, lines_in_textfile)
-                suffix += ' | total: {} of {} files'.format(
-                    current_txt_file, number_of_txt_files)
-                printProgressBar(counter, lines_in_textfile,
-                                 prefix='Progress:', suffix=suffix, length=50)
 
     return calculatedSolution, statistics

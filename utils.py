@@ -5,6 +5,7 @@ import fiona
 
 import networkx as nx
 
+from tqdm import tqdm
 from shapely import Point, LineString
 
 from plotting_functions import *
@@ -187,7 +188,7 @@ def cut(line, distance, point):
                 LineString([(point.x, point.y)] + coords[i:])]
 
 
-def createGraphFromSHPInput(filepath_shp):
+def createGraphFromSHPInput(filepath_shp, progress_bar=True, verbose=True):
     '''Creates a directed graph from a shp file.
 
     Parameters
@@ -212,26 +213,11 @@ def createGraphFromSHPInput(filepath_shp):
     Directed Graph
         The Directed Graph which contains all linesegments of the shapefiles as edges is returned.
     '''
-
     GraphFromSHP = nx.DiGraph()
-
-    counter = 0
-
-    # calculate how many street segments the shp file contains
-    nr_elements_in_SHP_file = 0
-    with fiona.open(filepath_shp) as street_lines:
-        nr_elements_in_SHP_file = sum(1 for street_segment in street_lines)
-
-    # Initial call to print 0% progress ProgressBar
-    suffix = '| SHP file street segments: {}/{}'.format(
-        counter+1, nr_elements_in_SHP_file)
-    printProgressBar(0, nr_elements_in_SHP_file,
-                     prefix='The Graph is being created:', suffix=suffix, length=50)
-
     with fiona.open(filepath_shp) as street_lines:
 
         # loop through all streets
-        for street_segment in list(street_lines):
+        for street_segment in tqdm(list(street_lines), disable=not progress_bar):
 
             previous_segment = (0, 0)
             # get the attributes from the street
@@ -267,16 +253,9 @@ def createGraphFromSHPInput(filepath_shp):
 
                 previous_segment = segment
 
-            # Increment Progress Bar
-            suffix = '| SHP file street segments: {}/{}'.format(
-                counter+1, nr_elements_in_SHP_file)
-            printProgressBar(counter + 1, nr_elements_in_SHP_file,
-                             prefix='The Graph is being created:', suffix=suffix, length=50)
-
-            counter += 1
-
-    print('The graph was created and contains {} edges.'.format(
-        GraphFromSHP.number_of_edges()))
+    if verbose:
+        print('The graph was created and contains {} edges.'.format(
+            GraphFromSHP.number_of_edges()))
 
     return GraphFromSHP
 
@@ -493,7 +472,7 @@ def write_solution_output(new_filename_solution, myCalculatedSolution):
                 else:
                     new_file.write("\n")
 
-def generate_velocity_histogram(new_filename_velocities, myCalculatedSolution):
+def generate_velocity_histogram(new_filename_velocities, myCalculatedSolution, make_plot=True):
     velocities = []
     velocities_none_counter = 0
 
@@ -504,9 +483,10 @@ def generate_velocity_histogram(new_filename_velocities, myCalculatedSolution):
         else:
             velocities.append(float(location_result['velocity_m_s']))
 
-    # plot the timeDifferences in a histogram
-    plotAndSaveHistogram(velocities, 0, 80, 5, new_filename_velocities,
-                         'Histogram of velocities between gps points', 'velocity in m/s')
+    if make_plot:
+        # plot the timeDifferences in a histogram
+        plotAndSaveHistogram(velocities, 0, 80, 5, new_filename_velocities,
+                             'Histogram of velocities between gps points', 'velocity in m/s')
 
     # TODO: FIXME: This means we have to generate the plot to get this count.
     # Consider whether we actually need to report this number in general, or if
