@@ -258,12 +258,15 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
 
     try:
         # try to find a path
+        # TODO: A* only generates one path, though there may in principle be
+        # many. It wwould be slower to use Dijkstra and compare all paths,
+        # but would also be more flexible and less arbitrary. We might want to
+        # add as an option.
         path = nx.astar_path(DG, source, target,
                              heuristic=air_line_distance, weight='weight')
 
-        # TODO: Can we not just compute the weighted length of path?
-        path_length = nx.astar_path_length(
-            DG, source, target, heuristic=air_line_distance, weight='weight')
+        # Compute the length of the path based on the weight attribute of edges in DG
+        path_length = sum(DG[u][v]["weight"] for u, v in zip(path[:-1], path[1:]))
 
         # get the IDs of the traversed lines
         prevNode = (0, 0)
