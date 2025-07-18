@@ -6,7 +6,7 @@ from gps2net import *
 
 def parse_args():
     import argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="gps2net Command Line Interface (CLI).")
     parser.add_argument("--shapefile",
                         help="Path to shapefile of road network.",
                         type=str,
