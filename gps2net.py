@@ -13,7 +13,7 @@ from shapely.geometry import LineString, Point
 
 from utils import *
 
-def temporarily_add_edge_to_graph(DG, startNode, endNode, edgeWeight, edgeId,
+def add_tmp_edge(DG, startNode, endNode, edgeWeight, edgeId,
                                   direction, all_added_edges):
     '''Temporarily adds an edge to the graph.
 
@@ -108,34 +108,34 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
         # add the line segments for the target as edges to the graph
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
             # add edges in both directions
-            temporarily_add_edge_to_graph(DG, edge_target_start, target, air_line_distance(
+            add_tmp_edge(DG, edge_target_start, target, air_line_distance(
                 edge_target_start, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, target, edge_target_end, air_line_distance(
+            add_tmp_edge(DG, target, edge_target_end, air_line_distance(
                 edge_target_end, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, edge_target_end, target, air_line_distance(
+            add_tmp_edge(DG, edge_target_end, target, air_line_distance(
                 edge_target_end, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, target, edge_target_start, air_line_distance(
+            add_tmp_edge(DG, target, edge_target_start, air_line_distance(
                 edge_target_start, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(DG, edge_target_start, target, air_line_distance(
+            add_tmp_edge(DG, edge_target_start, target, air_line_distance(
                 edge_target_start, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, target, edge_target_end, air_line_distance(
+            add_tmp_edge(DG, target, edge_target_end, air_line_distance(
                 edge_target_end, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
 
         else:
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(DG, target, edge_target_start, air_line_distance(
+            add_tmp_edge(DG, target, edge_target_start, air_line_distance(
                 edge_target_start, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, edge_target_end, target, air_line_distance(
+            add_tmp_edge(DG, edge_target_end, target, air_line_distance(
                 edge_target_end, target), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
 
@@ -160,12 +160,12 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
 
             # add adges in both directions
             if(source_line_oneway == 'B' or ignore_oneway == True):
-                temporarily_add_edge_to_graph(DG, source, target,
+                add_tmp_edge(DG, source, target,
                                               air_line_distance(source,
                                                                 target),
                                               graph_edge_id, graph_edge_oneway,
                                               all_added_edges)
-                temporarily_add_edge_to_graph(DG, target, source,
+                add_tmp_edge(DG, target, source,
                                               air_line_distance(source,
                                                                 target),
                                               graph_edge_id, graph_edge_oneway,
@@ -175,14 +175,14 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
             elif(source_line_oneway == 'F'):
                 # if the source_line (which equals target_line) is oneway from the from-node to the to-node, the point which is closer to the beginning of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
-                    temporarily_add_edge_to_graph(DG, target, source,
+                    add_tmp_edge(DG, target, source,
                                                   air_line_distance(source,
                                                                     target),
                                                   graph_edge_id,
                                                   graph_edge_oneway,
                                                   all_added_edges)
                 else:
-                    temporarily_add_edge_to_graph(DG, source, target,
+                    add_tmp_edge(DG, source, target,
                                                   air_line_distance(source,
                                                                     target),
                                                   graph_edge_id,
@@ -193,14 +193,14 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
             elif(source_line_oneway == 'T'):
                 # if the source_line (which equals target_line) is oneway from the to-node to the from-node, the point which is closer to the end of the line has to be the starting point of the directed edge which is added to the graph
                 if(d_source_same_line > d_target_same_line):
-                    temporarily_add_edge_to_graph(DG, source, target,
+                    add_tmp_edge(DG, source, target,
                                                   air_line_distance(source,
                                                                     target),
                                                   graph_edge_id,
                                                   graph_edge_oneway,
                                                   all_added_edges)
                 else:
-                    temporarily_add_edge_to_graph(DG, target, source,
+                    add_tmp_edge(DG, target, source,
                                                   air_line_distance(source,
                                                                     target),
                                                   graph_edge_id,
@@ -210,23 +210,23 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
         # add the line segments for the source as edges to the graph
         if(graph_edge_oneway == 'B' or ignore_oneway == True):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(DG, edge_source_start, source,
+            add_tmp_edge(DG, edge_source_start, source,
                                           air_line_distance(edge_source_start,
                                                             source),
                                           graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, source, edge_source_end,
+            add_tmp_edge(DG, source, edge_source_end,
                                           air_line_distance(edge_source_end,
                                                             source),
                                           graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(DG, edge_source_end, source,
+            add_tmp_edge(DG, edge_source_end, source,
                                           air_line_distance(edge_source_end,
                                                             source),
                                           graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, source, edge_source_start,
+            add_tmp_edge(DG, source, edge_source_start,
                                           air_line_distance(edge_source_start,
                                                             source),
                                           graph_edge_id, graph_edge_oneway,
@@ -234,12 +234,12 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
 
         elif(graph_edge_oneway == 'F'):
             # add edges in direction of from-node to to-node
-            temporarily_add_edge_to_graph(DG, edge_source_start, source,
+            add_tmp_edge(DG, edge_source_start, source,
                                           air_line_distance(edge_source_start,
                                                             source),
                                           graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, source, edge_source_end,
+            add_tmp_edge(DG, source, edge_source_end,
                                           air_line_distance(edge_source_end,
                                                             source),
                                           graph_edge_id, graph_edge_oneway,
@@ -247,10 +247,10 @@ def getShortestPathAStar(DG, source, target, source_line, target_line, source_li
 
         else:
             # add edges in direction of to-node to from-node
-            temporarily_add_edge_to_graph(DG, edge_source_end, source, air_line_distance(
+            add_tmp_edge(DG, edge_source_end, source, air_line_distance(
                 edge_source_end, source), graph_edge_id, graph_edge_oneway,
                                           all_added_edges)
-            temporarily_add_edge_to_graph(DG, source, edge_source_start,
+            add_tmp_edge(DG, source, edge_source_start,
                                           air_line_distance(edge_source_start,
                                                             source),
                                           graph_edge_id, graph_edge_oneway,
